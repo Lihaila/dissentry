@@ -1,6 +1,6 @@
 {
   "name": "dissentry",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Community Notes for AI answers. Ask one model, let the others dissent. Local-first, bring your own keys (cloud or Ollama/LM Studio).",
   "scripts": {
     "dev": "vite",
