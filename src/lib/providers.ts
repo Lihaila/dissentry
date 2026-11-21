@@ -1,18 +1,24 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogle } from '@ai-sdk/google';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { getSettings } from './settings';
 import type { Profile } from './types';
 
 const TARGET_HEADER = 'x-dissentry-target';
 
 let proxyAvailable: boolean | null = null;
+let systemProxy: string | null = null;
+/** Proxy found in the server's environment (HTTPS_PROXY etc.), as protocol://host:port. */
+export const getSystemProxy = () => systemProxy;
 
 /** Is the local Dissentry server present? (false when the app is hosted as static files.) */
 export async function detectProxy(): Promise<boolean> {
   if (proxyAvailable !== null) return proxyAvailable;
   try {
     const r = await fetch('/api/health', { cache: 'no-store' });
-    proxyAvailable = r.ok && (await r.json()).proxy === true;
+    const j = r.ok ? await r.json() : {};
+    proxyAvailable = j.proxy === true;
+    systemProxy = j.systemProxy ?? null;
   } catch {
     proxyAvailable = false;
   }
@@ -30,6 +36,12 @@ function urlOf(input: RequestInfo | URL): string {
 export const proxyFetch: typeof fetch = async (input, init) => {
   const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
   headers.set(TARGET_HEADER, urlOf(input));
+  const s = getSettings();
+  if (s.proxyMode === 'direct') headers.set('x-dissentry-proxy', 'direct');
+  else if (s.proxyMode === 'custom' && s.proxyUrl.trim()) {
+    headers.set('x-dissentry-proxy', s.proxyUrl.trim());
+    if (s.proxyBypass.trim()) headers.set('x-dissentry-proxy-bypass', s.proxyBypass.trim());
+  }
   return fetch('/api/proxy', {
     ...init,
     method: init?.method ?? (input instanceof Request ? input.method : 'GET'),
@@ -117,7 +129,7 @@ export function friendlyError(e: unknown, p: Profile): string {
         ? `Could not reach ${p.baseUrl}. Is it running? Browsers also need CORS: for Ollama start it with OLLAMA_ORIGINS=* ollama serve, or run Dissentry with "npx dissentry".`
         : `The browser could not reach ${p.baseUrl} (likely blocked by CORS). Run Dissentry locally with "npx dissentry" to use the built-in proxy.`;
     }
-    return `Could not reach ${p.baseUrl}.`;
+    return `Could not reach ${p.baseUrl}. Check Settings → Network proxy.`;
   }
   if (err?.statusCode === 401 || /401|invalid.*key|unauthori/i.test(msg)) return `Authentication failed for @${p.handle}: check the API key. (${msg})`;
   if (err?.statusCode === 404 || /model.*not.*found|does not exist/i.test(msg)) return `Model "${p.modelId}" not found for @${p.handle}. (${msg})`;

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { EnvHttpProxyAgent, fetch as undiciFetch } from 'undici';
+import { fetch as undiciFetch, type Dispatcher } from 'undici';
+import { BYPASS_HEADER, describeProxy, dispatcherFor, envProxyUrl, PROXY_HEADER, validateProxyUrl } from './network';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 
@@ -12,18 +13,16 @@ export interface AppOptions {
 
 export const TARGET_HEADER = 'x-dissentry-target';
 
-// Honour HTTPS_PROXY / HTTP_PROXY / NO_PROXY (Node's built-in fetch ignores them). Many users,
-// e.g. in mainland China, can only reach some providers through a local proxy.
-export const usingEnvProxy = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].some((k) => process.env[k]);
-const dispatcher = usingEnvProxy ? new EnvHttpProxyAgent() : undefined;
-const upstreamFetch = (url: URL, init: Record<string, unknown>) =>
+// Node's built-in fetch ignores proxy settings, so requests that need a proxy go through undici
+// with an explicit dispatcher. The user picks the proxy in Settings; it arrives per request.
+const upstreamFetch = (url: URL, init: Record<string, unknown>, dispatcher?: Dispatcher) =>
   (dispatcher ? undiciFetch(url, { ...init, dispatcher } as never) : fetch(url, init as RequestInit)) as Promise<Response>;
 
 // Headers we never forward upstream: hop-by-hop, browser identity, and our own control headers.
 const STRIP_REQUEST = new Set([
   'host', 'origin', 'referer', 'cookie', 'connection', 'content-length', 'accept-encoding',
   'sec-fetch-site', 'sec-fetch-mode', 'sec-fetch-dest', 'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform',
-  TARGET_HEADER,
+  TARGET_HEADER, PROXY_HEADER, BYPASS_HEADER,
 ]);
 const STRIP_RESPONSE = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'set-cookie']);
 
@@ -60,7 +59,7 @@ export function createApp(opts: AppOptions) {
     await next();
   });
 
-  app.get('/api/health', (c) => c.json({ ok: true, proxy: true }));
+  app.get('/api/health', (c) => c.json({ ok: true, proxy: true, systemProxy: describeProxy(envProxyUrl()) ?? null }));
 
   // Stateless pass-through. Keys travel in the request headers and are never stored or logged.
   app.all('/api/proxy', async (c) => {
@@ -68,6 +67,16 @@ export function createApp(opts: AppOptions) {
     let url: URL;
     try { url = new URL(target ?? ''); } catch { return c.json({ error: `Missing or invalid ${TARGET_HEADER}` }, 400); }
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return c.json({ error: 'Only http(s) targets' }, 400);
+
+    const proxyMode = c.req.header(PROXY_HEADER);
+    if (proxyMode && proxyMode !== 'system' && proxyMode !== 'direct') {
+      const bad = validateProxyUrl(proxyMode);
+      if (bad) return c.json({ error: { message: bad } }, 400);
+    }
+    let dispatcher: Dispatcher | undefined;
+    try { dispatcher = dispatcherFor(url, proxyMode, c.req.header(BYPASS_HEADER) ?? ''); }
+    catch (e) { return c.json({ error: { message: `Invalid proxy: ${(e as Error).message}` } }, 400); }
+    const via = dispatcher ? ` via proxy ${describeProxy(proxyMode && proxyMode !== 'system' ? proxyMode : envProxyUrl())}` : '';
 
     const headers = new Headers();
     c.req.raw.headers.forEach((v, k) => { if (!STRIP_REQUEST.has(k.toLowerCase())) headers.set(k, v); });
@@ -83,13 +92,17 @@ export function createApp(opts: AppOptions) {
         signal: c.req.raw.signal,
         redirect: 'follow',
         duplex: hasBody ? 'half' : undefined, // required for streamed request bodies
-      });
+      }, dispatcher);
     } catch (e) {
       const cause = (e as { cause?: { code?: string; message?: string } }).cause;
-      const detail = cause?.code === 'ECONNREFUSED'
-        ? `Connection refused at ${url.host}. Is the server running?`
+      const code = cause?.code ?? '';
+      const detail = code === 'ECONNREFUSED'
+        ? (via ? 'the proxy refused the connection. Is it running?' : 'connection refused. Is the server running?')
+        : !via && /ECONNRESET|TIMEOUT|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|ENETUNREACH|EHOSTUNREACH/.test(code)
+          ? `${cause?.message ?? code}. The provider may be blocked on your network: set a proxy in Settings → Network proxy.`
+        : /TIMEOUT/.test(code) ? 'timed out through the proxy'
         : (cause?.message ?? (e as Error).message);
-      return c.json({ error: { message: `Proxy could not reach ${url.host}: ${detail}` } }, 502);
+      return c.json({ error: { message: `Could not reach ${url.host}${via}: ${detail}` } }, 502);
     }
     const out = new Headers();
     upstream.headers.forEach((v, k) => { if (!STRIP_RESPONSE.has(k.toLowerCase())) out.set(k, v); });

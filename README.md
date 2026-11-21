@@ -17,6 +17,7 @@ You decide whether each note is right. Over time, the **Trust** page shows which
 ```
 
 - **Bring your own models.** Anthropic, OpenAI, Gemini, OpenRouter, DeepSeek, Qwen, xAI, Groq, Mistral, or any OpenAI-compatible endpoint, plus **Ollama** and **LM Studio** running locally.
+- **Works behind proxies.** HTTP, HTTPS and SOCKS5 proxies, with a bypass list, set in the app.
 - **Local-first.** Posts, notes and API keys live in your browser (IndexedDB). There are no accounts, no telemetry and no server-side storage.
 - **Saves money.** Let a cheap or local model answer and a strong model check. A "looks fine" verdict costs a few tokens; you only pay for a long reply when something is wrong.
 - **X-style threads.** Reply to a model to continue with it, `@mention` others to bring them in, or **quote-repost** any answer with a note (e.g. `@gemini is this right?`). The quoted exchange becomes context for the reply.
@@ -31,13 +32,15 @@ This opens http://localhost:4317. Go to **Models → Add model**, paste a key (o
 
 Requires Node.js 20+.
 
-### Behind a proxy (e.g. mainland China)
+### Using a proxy (e.g. mainland China, company networks)
 
-The local server respects `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`:
+Open **Settings → Network proxy** and choose:
 
-```bash
-HTTPS_PROXY=http://127.0.0.1:7890 npx dissentry
-```
+- **System**: uses `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` from the environment Dissentry was started in (the default)
+- **No proxy**: connect to every provider directly
+- **Custom proxy**: `http://`, `https://` or `socks5://` (e.g. your Clash / V2Ray client at `socks5://127.0.0.1:1080`), with optional `user:pass@`. Add a bypass list such as `.aliyuncs.com, api.deepseek.com` to reach some providers directly.
+
+**Test connection** checks that a provider is reachable through your choice. Local models (Ollama, LM Studio) always connect directly.
 
 ### Docker
 

@@ -160,8 +160,8 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
         <label className="flex items-center gap-2"><input type="checkbox" checked={p.isChecker} onChange={(e) => set({ isChecker: e.target.checked })} /> Checker: reviews other models’ answers</label>
         <label className="flex items-center gap-2"><input type="color" value={p.color} onChange={(e) => set({ color: e.target.value })} className="h-6 w-8 cursor-pointer bg-transparent" /> Color</label>
         {hasProxy() && (
-          <label className="flex items-center gap-2" title="Send requests through the local Dissentry server to avoid browser CORS blocks. Keys are passed through, never stored.">
-            <input type="checkbox" checked={p.useProxy} onChange={(e) => set({ useProxy: e.target.checked })} /> Use local proxy
+          <label className="flex items-center gap-2" title="Send requests through the local Dissentry server: avoids browser CORS blocks and uses the network proxy from Settings. Keys are passed through, never stored.">
+            <input type="checkbox" checked={p.useProxy} onChange={(e) => set({ useProxy: e.target.checked })} /> Route through local server
           </label>
         )}
       </div>

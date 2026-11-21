@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { PageHeader } from '../components/Layout';
+import { ProxySettings } from '../components/ProxySettings';
 import { hasProxy } from '../lib/providers';
 import { updateSettings, useSettings } from '../lib/settings';
 import { clearAll, exportAll, importAll } from '../lib/store';
@@ -41,10 +42,11 @@ export function SettingsPage() {
         <span><b>Check every answer automatically</b><br /><span className="text-[13px] text-slate-500">Checkers review each answer when it finishes. Turn off to check manually with the 🔍 button (saves tokens).</span></span>
       </label>
       <div className={row}>
-        <b>Connection</b>
+        <b>Network proxy</b>
         <p className="mt-1 text-[13px] text-slate-500">{hasProxy()
-          ? 'Local Dissentry server detected. Provider requests can go through it, so browser CORS rules never block them. Keys are passed through and never stored.'
-          : 'No local server (static hosting). Requests go straight from your browser to each provider. Run "npx dissentry" for full provider support.'}</p>
+          ? 'Provider requests go through the local Dissentry server (no CORS problems; keys are passed through, never stored). Choose how that server connects out.'
+          : ''}</p>
+        <ProxySettings />
       </div>
       <div className={row}>
         <b>Your data</b>

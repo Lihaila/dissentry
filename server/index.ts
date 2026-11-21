@@ -3,7 +3,8 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createApp, usingEnvProxy } from './app';
+import { createApp } from './app';
+import { describeProxy, envProxyUrl } from './network';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(`--${name}`);
@@ -47,7 +48,7 @@ const app = createApp({ allowedHosts: ['localhost', '127.0.0.1', '[::1]', ...ext
 serve({ fetch: app.fetch, port, hostname: host }, (info) => {
   const url = `http://localhost:${info.port}`;
   console.log(`\n  Dissentry is running at ${url}\n  Your data stays in this browser. API keys never leave this machine except to the provider you call.\n  Press Ctrl+C to stop.\n`);
-  if (usingEnvProxy) console.log('  Provider requests use your HTTPS_PROXY / HTTP_PROXY (NO_PROXY respected).\n');
+  if (envProxyUrl()) console.log(`  System proxy detected: ${describeProxy(envProxyUrl())} (used when Settings → Network proxy is "System").\n`);
   if (!flag('no-open') && !process.env.CI && host === '127.0.0.1') {
     const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open';
     const cmdArgs = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
