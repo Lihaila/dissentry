@@ -334,4 +334,10 @@ export const ja: Dict = {
   "footer.rights": "無断転載を禁じます。",
   "footer.location": "米国デラウェア州",
   "footer.current": "表示中",
+  "composer.web": "Web検索",
+  "composer.webTip": "Web 検索：対応モデルが最新の Web 情報を検索します（OpenRouter、Gemini、Claude、OpenAI、xAI、Qwen）",
+  "post.searching": "Web を検索中",
+  "post.sources": "出典",
+  "settings.webSearch": "Web 検索",
+  "settings.webSearchDesc": "対応モデルが最新の Web 情報を検索して回答・ファクトチェックできるようにします（OpenRouter、Gemini、Claude、OpenAI、xAI、Qwen）。一部のプロバイダーは検索ごとに追加料金を課金します。",
 };

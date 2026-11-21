@@ -4,6 +4,8 @@ export interface Settings {
   userName: string;
   /** Run checkers automatically after every model answer. */
   autoCheck: boolean;
+  /** Allow supported models (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen) to search the live web. */
+  webSearch: boolean;
   /** How the local server reaches providers: OS env proxy, no proxy, or a custom proxy URL. */
   proxyMode: 'system' | 'direct' | 'custom';
   proxyUrl: string;
@@ -12,7 +14,7 @@ export interface Settings {
 }
 
 const KEY = 'dissentry.settings';
-const DEFAULTS: Settings = { userName: '', autoCheck: true, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
+const DEFAULTS: Settings = { userName: '', autoCheck: true, webSearch: true, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
 const listeners = new Set<() => void>();
 
 let current: Settings = (() => {

@@ -334,4 +334,10 @@ export const ko: Dict = {
   "footer.rights": "모든 권리 보유.",
   "footer.location": "미국 델라웨어주",
   "footer.current": "현재 앱",
+  "composer.web": "웹 검색",
+  "composer.webTip": "웹 검색: 지원 모델이 실시간 웹을 검색합니다 (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen)",
+  "post.searching": "웹 검색 중",
+  "post.sources": "출처",
+  "settings.webSearch": "웹 검색",
+  "settings.webSearchDesc": "지원 모델이 최신 답변과 팩트체크를 위해 실시간 웹을 검색할 수 있게 합니다 (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen). 일부 제공자는 검색당 추가 요금을 청구할 수 있습니다.",
 };

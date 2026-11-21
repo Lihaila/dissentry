@@ -334,4 +334,10 @@ export const zh: Dict = {
   "footer.rights": "保留所有权利。",
   "footer.location": "美国特拉华州",
   "footer.current": "当前",
+  "composer.web": "联网",
+  "composer.webTip": "联网搜索：允许支持的模型实时搜索网页（OpenRouter、Gemini、Claude、OpenAI、xAI、千问）",
+  "post.searching": "正在联网搜索",
+  "post.sources": "参考来源",
+  "settings.webSearch": "联网搜索",
+  "settings.webSearchDesc": "允许支持的模型实时搜索网页以获取最新信息与核查事实（OpenRouter、Gemini、Claude、OpenAI、xAI、千问）。部分服务商可能按次收取额外搜索费用。",
 };

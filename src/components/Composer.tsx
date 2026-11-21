@@ -1,11 +1,12 @@
-import { ArrowUp, Check } from 'lucide-react';
+import { ArrowUp, Check, Globe } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { useT } from '../i18n';
 import { submitPost } from '../lib/engine';
 import { useProfiles } from '../lib/hooks';
 import { mentionQueryAt, parseMentions } from '../lib/mentions';
-import { displayName, useSettings } from '../lib/settings';
+import { supportsWebSearch } from '../lib/providers';
+import { displayName, updateSettings, useSettings } from '../lib/settings';
 import type { Profile } from '../lib/types';
 import { closeNewThread } from '../lib/ui';
 import { Avatar } from './Avatar';
@@ -71,7 +72,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
     setText('');
     setMenu(null);
     try {
-      const post = await submitPost({ text: value, parentId, quoteOfId });
+      const post = await submitPost({ text: value, parentId, quoteOfId, webSearch: settings.webSearch });
       onPosted?.(post.id);
     } finally {
       setBusy(false);
@@ -172,7 +173,23 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                 <div className="py-1">{statusLine}</div>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5">
+              {enabled.some(supportsWebSearch) && (
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ webSearch: !settings.webSearch })}
+                  aria-pressed={settings.webSearch}
+                  title={t('composer.webTip')}
+                  className={`inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-[12px] font-medium transition active:scale-[.97] ${
+                    settings.webSearch
+                      ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
+                      : 'border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-ink'
+                  }`}
+                >
+                  <Globe size={13.5} />
+                  <span>{t('composer.web')}</span>
+                </button>
+              )}
               <kbd className="hidden rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-slate-400 sm:inline">⌘↵</kbd>
               <button
                 onClick={() => void send()}

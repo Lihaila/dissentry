@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, Check, Copy, ImageDown, MessageCircle, Quote, RefreshCw, ScanSearch, Square, Trash2 } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Globe, ImageDown, MessageCircle, Quote, RefreshCw, ScanSearch, Square, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useT } from '../i18n';
@@ -81,8 +81,40 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
             ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{highlightMentions(post.text)}</p>
             : post.text
               ? <Markdown text={post.status === 'done' ? markClaims(post.text, notes) : post.text} streaming={post.status === 'streaming'} />
-              : post.status === 'streaming' && <span className="dots text-2xl leading-none text-slate-400"><span>•</span><span>•</span><span>•</span></span>}
+              : post.status === 'streaming' && (
+                post.webSearch ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50/90 px-2.5 py-1 text-[12.5px] font-medium text-sky-700 ring-1 ring-sky-200/70">
+                    <Globe size={13} className="animate-pulse" />
+                    {t('post.searching')}<span className="dots"><span>.</span><span>.</span><span>.</span></span>
+                  </span>
+                ) : (
+                  <span className="dots text-2xl leading-none text-slate-400"><span>•</span><span>•</span><span>•</span></span>
+                )
+              )}
         </div>
+
+        {post.sources && post.sources.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5" aria-label={t('post.sources')}>
+            {post.sources.map((src) => {
+              let host = src.url;
+              try { host = new URL(src.url).hostname.replace(/^www\./, ''); } catch { /* keep raw */ }
+              return (
+                <a
+                  key={src.url}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  title={src.title ? `${src.title} — ${src.url}` : src.url}
+                  className="inline-flex max-w-[220px] items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50/80 px-2.5 py-0.5 text-[11.5px] font-medium text-slate-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                >
+                  <Globe size={11} className="shrink-0 text-slate-400" />
+                  <span className="truncate">{src.title || host}</span>
+                </a>
+              );
+            })}
+          </div>
+        )}
 
         {post.status === 'error' && (
           <div className="mt-2.5 flex items-start gap-2.5 rounded-xl border border-red-200/90 bg-red-50/90 p-3 text-[13px] text-red-800">
@@ -202,9 +234,18 @@ function UsageLine({ post, checks, profiles }: { post: Post; checks: CheckRow[];
   const total = costs.reduce<number>((a, c) => a + (c ?? 0), 0);
   const tip = t('usage.postTip', { i: ans.input, o: ans.output, c: checkTokens });
   return (
-    <p className="mt-2 text-[11.5px] tabular-nums text-slate-400" title={tip}>
-      {checkTokens ? t('usage.postLine', { a: fmtTokens(ans.input + ans.output), c: fmtTokens(checkTokens) }) : `${fmtTokens(ans.input + ans.output)} ${t('usage.tokens')}`}
-      {total > 0 && <> · {known ? '' : '≥ '}{fmtCost(total)}</>}
+    <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[11.5px] tabular-nums text-slate-400" title={tip}>
+      {post.webSearch && (
+        <span className="inline-flex items-center gap-1 text-sky-600/80">
+          <Globe size={11} />
+          <span>{t('composer.web')}</span>
+          <span className="text-slate-300">·</span>
+        </span>
+      )}
+      <span>
+        {checkTokens ? t('usage.postLine', { a: fmtTokens(ans.input + ans.output), c: fmtTokens(checkTokens) }) : `${fmtTokens(ans.input + ans.output)} ${t('usage.tokens')}`}
+        {total > 0 && <> · {known ? '' : '≥ '}{fmtCost(total)}</>}
+      </span>
     </p>
   );
 }

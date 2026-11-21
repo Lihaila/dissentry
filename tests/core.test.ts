@@ -175,3 +175,71 @@ describe('usage', () => {
     expect(s.total.priced).toBe(false);
   });
 });
+
+import { generateText } from 'ai';
+import { isSearchUnsupportedError, modelCall, supportsWebSearch } from '../src/lib/providers';
+describe('web search provider wiring', () => {
+  const mk = (protocol: Profile['protocol'], baseUrl: string, modelId = 'm'): Profile => ({
+    ...claude, protocol, baseUrl, modelId, apiKey: 'k',
+  });
+  it('identifies providers with native web search', () => {
+    expect(supportsWebSearch(mk('openai', 'https://openrouter.ai/api/v1'))).toBe(true);
+    expect(supportsWebSearch(mk('google', 'https://generativelanguage.googleapis.com/v1beta'))).toBe(true);
+    expect(supportsWebSearch(mk('anthropic', 'https://api.anthropic.com/v1'))).toBe(true);
+    expect(supportsWebSearch(mk('openai', 'https://api.openai.com/v1'))).toBe(true);
+    expect(supportsWebSearch(mk('openai', 'https://api.x.ai/v1'))).toBe(true);
+    expect(supportsWebSearch(mk('openai', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'))).toBe(true);
+    expect(supportsWebSearch(mk('openai', 'http://localhost:11434/v1'))).toBe(false);
+    expect(supportsWebSearch(mk('openai', 'https://api.deepseek.com/v1'))).toBe(false);
+  });
+  it('sends the right web-search payload on the wire for each provider', async () => {
+    async function capture(profile: Profile, webSearch: boolean) {
+      let url = '';
+      let body: Record<string, unknown> = {};
+      const fakeFetch: typeof fetch = async (input, init) => {
+        url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        body = JSON.parse(String(init?.body ?? '{}'));
+        return new Response(JSON.stringify({ error: { message: 'stop' } }), { status: 400, headers: { 'content-type': 'application/json' } });
+      };
+      const call = modelCall(profile, { webSearch, fetchImpl: fakeFetch });
+      await generateText({ model: call.model, tools: call.tools, prompt: 'weather?', maxRetries: 0 }).catch(() => {});
+      return { url, body, call };
+    }
+
+    const orOn = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017'), true);
+    expect(orOn.call.searchActive).toBe(true);
+    expect(orOn.url).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(orOn.body.plugins).toEqual([{ id: 'web' }]);
+
+    const orOff = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017'), false);
+    expect(orOff.call.searchActive).toBe(false);
+    expect(orOff.body.plugins).toBeUndefined();
+
+    const qwenOn = await capture(mk('openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-flash'), true);
+    expect(qwenOn.body.enable_search).toBe(true);
+
+    const oaOn = await capture(mk('openai', 'https://api.openai.com/v1', 'gpt-6-luna'), true);
+    expect(oaOn.url).toBe('https://api.openai.com/v1/responses');
+    expect((oaOn.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search');
+
+    const xaiOn = await capture(mk('openai', 'https://api.x.ai/v1', 'grok-4.3'), true);
+    expect(xaiOn.url).toBe('https://api.x.ai/v1/responses');
+    expect((xaiOn.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search');
+
+    const gOn = await capture(mk('google', 'https://generativelanguage.googleapis.com/v1beta', 'gemini-3.5-flash'), true);
+    expect(JSON.stringify(gOn.body.tools)).toContain('googleSearch');
+
+    const aOn = await capture(mk('anthropic', 'https://api.anthropic.com/v1', 'claude-sonnet-5-5'), true);
+    expect((aOn.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search_20250305');
+
+    const ollamaOn = await capture(mk('openai', 'http://localhost:11434/v1', 'llama3.2'), true);
+    expect(ollamaOn.call.searchActive).toBe(false);
+    expect(ollamaOn.body.plugins).toBeUndefined();
+    expect(ollamaOn.body.tools).toBeUndefined();
+  });
+  it('detects unsupported-search errors without catching auth or rate-limit errors', () => {
+    expect(isSearchUnsupportedError({ statusCode: 400, message: 'web_search tool is not supported for this model' })).toBe(true);
+    expect(isSearchUnsupportedError({ statusCode: 401, message: 'Invalid API key' })).toBe(false);
+    expect(isSearchUnsupportedError({ statusCode: 429, message: 'rate limit exceeded' })).toBe(false);
+  });
+});

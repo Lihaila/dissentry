@@ -332,6 +332,12 @@ export const en = {
   "footer.rights": "All rights reserved.",
   "footer.location": "Delaware, United States",
   "footer.current": "Here",
+  "composer.web": "Web",
+  "composer.webTip": "Web search: let supported models search the live web (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen)",
+  "post.searching": "Searching the web",
+  "post.sources": "Sources",
+  "settings.webSearch": "Web search",
+  "settings.webSearchDesc": "Let supported models search the live web for up-to-date answers and fact-checks (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen). Some providers charge an extra per-search fee.",
 };
 
 export type Dict = typeof en;

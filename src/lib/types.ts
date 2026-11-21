@@ -1,6 +1,7 @@
 export type Protocol = 'openai' | 'anthropic' | 'google';
 
 export interface Usage { input: number; output: number }
+export interface Source { url: string; title?: string }
 
 export interface Profile {
   id: string;
@@ -39,6 +40,10 @@ export interface Post {
   error?: string;
   /** Set when this post is the author's response to a note. */
   respondsToNoteId?: string;
+  /** True when web search was enabled for this post. */
+  webSearch?: boolean;
+  /** Web sources cited by provider-native web search. */
+  sources?: Source[];
   usage?: Usage;
   createdAt: number;
 }

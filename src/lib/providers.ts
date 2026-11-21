@@ -1,6 +1,8 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogle } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import type { LanguageModel, ToolSet } from 'ai';
 import { t } from '../i18n';
 import { getSettings } from './settings';
 import type { Profile } from './types';
@@ -55,30 +57,89 @@ export const fetchFor = (p: Profile): typeof fetch => (p.useProxy && hasProxy() 
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '');
 
-export function languageModel(p: Profile, fetchImpl?: typeof fetch) {
-  const f = fetchImpl ?? fetchFor(p);
+/** Whether this provider has a native web-search integration Dissentry can enable. */
+export function supportsWebSearch(p: Pick<Profile, 'protocol' | 'baseUrl'>): boolean {
+  if (p.protocol === 'google' || p.protocol === 'anthropic') return true;
+  const url = p.baseUrl.toLowerCase();
+  return url.includes('openrouter.ai') || url.includes('api.openai.com') || url.includes('api.x.ai') || url.includes('aliyuncs.com');
+}
+
+export interface ModelCallConfig {
+  model: LanguageModel;
+  tools?: ToolSet;
+  searchActive: boolean;
+}
+
+export function modelCall(p: Profile, opts: { webSearch?: boolean; fetchImpl?: typeof fetch } = {}): ModelCallConfig {
+  const f = opts.fetchImpl ?? fetchFor(p);
   const baseURL = trimSlash(p.baseUrl);
+  const wantSearch = !!opts.webSearch;
   switch (p.protocol) {
-    case 'anthropic':
-      return createAnthropic({
+    case 'anthropic': {
+      const provider = createAnthropic({
         apiKey: p.apiKey,
         baseURL,
         fetch: f,
         headers: { 'anthropic-dangerous-direct-browser-access': 'true' },
-      })(p.modelId);
-    case 'google':
-      return createGoogle({ apiKey: p.apiKey, baseURL, fetch: f })(p.modelId);
-    default:
-      return createOpenAICompatible({
+      });
+      return {
+        model: provider(p.modelId),
+        tools: wantSearch ? { web_search: provider.tools.webSearch_20250305({ maxUses: 3 }) } : undefined,
+        searchActive: wantSearch,
+      };
+    }
+    case 'google': {
+      const provider = createGoogle({ apiKey: p.apiKey, baseURL, fetch: f });
+      return {
+        model: provider(p.modelId),
+        tools: wantSearch ? { google_search: provider.tools.googleSearch({}) } : undefined,
+        searchActive: wantSearch,
+      };
+    }
+    default: {
+      const lower = baseURL.toLowerCase();
+      // OpenAI and xAI serve native web_search through the Responses API (/v1/responses).
+      if (wantSearch && (lower.includes('api.openai.com') || lower.includes('api.x.ai'))) {
+        const provider = createOpenAI({ apiKey: p.apiKey || undefined, baseURL, fetch: f });
+        return {
+          model: provider.responses(p.modelId),
+          tools: { web_search: provider.tools.webSearch({}) },
+          searchActive: true,
+        };
+      }
+      const isOpenRouter = lower.includes('openrouter.ai');
+      const isQwen = lower.includes('aliyuncs.com');
+      const searchActive = wantSearch && (isOpenRouter || isQwen);
+      const provider = createOpenAICompatible({
         name: p.handle || 'custom',
         baseURL,
         apiKey: p.apiKey || undefined,
         fetch: f,
         includeUsage: true,
         // OpenRouter attributes usage to apps by these headers (shows Dissentry in its app rankings).
-        headers: baseURL.includes('openrouter.ai') ? { 'HTTP-Referer': 'https://dissentry.lihaila.com', 'X-Title': 'Dissentry' } : undefined,
-      })(p.modelId);
+        headers: isOpenRouter ? { 'HTTP-Referer': 'https://dissentry.lihaila.com', 'X-Title': 'Dissentry' } : undefined,
+        transformRequestBody: searchActive
+          ? (args) => (isOpenRouter ? { ...args, plugins: [{ id: 'web' }] } : { ...args, enable_search: true })
+          : undefined,
+      });
+      return { model: provider(p.modelId), searchActive };
+    }
   }
+}
+
+export function languageModel(p: Profile, fetchImpl?: typeof fetch) {
+  return modelCall(p, { fetchImpl }).model;
+}
+
+/** True when an error likely came from a specific model rejecting web-search tools/plugins. */
+export function isSearchUnsupportedError(e: unknown): boolean {
+  const err = e as { statusCode?: number; message?: string; responseBody?: string };
+  if (err?.statusCode === 401 || err?.statusCode === 403 || err?.statusCode === 429) return false;
+  const text = `${err?.message ?? ''} ${err?.responseBody ?? ''}`;
+  if (err?.statusCode === 400 || err?.statusCode === 404 || err?.statusCode === 422) {
+    return /tool|search|plugin|unsupported|not support|unknown.*param|invalid.*param|responses|grounding|enable_search/i.test(text);
+  }
+  return false;
 }
 
 /** List model IDs available to this profile's key. */

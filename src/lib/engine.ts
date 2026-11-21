@@ -1,14 +1,14 @@
 import { generateText, streamText } from 'ai';
 import { db, uid } from './db';
-import { buildCheckMessages, buildReplyMessages, CHECKER_SYSTEM, replySystemPrompt, type ContextInput } from './context';
+import { buildCheckMessages, buildReplyMessages, checkerSystemPrompt, replySystemPrompt, type ContextInput } from './context';
 import { t } from '../i18n';
 import { parseMentions } from './mentions';
 import { findMatchingNote, maxSeverity, parseCheckResult } from './notes';
-import { friendlyError, languageModel } from './providers';
+import { friendlyError, isSearchUnsupportedError, modelCall } from './providers';
 import { getSettings } from './settings';
 import { getAncestors, getQuotes, profileMap } from './store';
 import { abortStream, isRunning, trackStream, untrackStream } from './streams';
-import type { Note, Post, Profile, Usage } from './types';
+import type { Note, Post, Profile, Source, Usage } from './types';
 
 const toUsage = (u?: { inputTokens?: number; outputTokens?: number }): Usage | undefined =>
   u && (u.inputTokens || u.outputTokens) ? { input: u.inputTokens ?? 0, output: u.outputTokens ?? 0 } : undefined;
@@ -33,9 +33,10 @@ async function enabledProfiles(): Promise<Profile[]> {
  * Create a user post and ask every @mentioned model to reply.
  * Replying to a model's post without any @mention addresses that model, like replying on X.
  */
-export async function submitPost(input: { text: string; parentId?: string; quoteOfId?: string }): Promise<Post> {
+export async function submitPost(input: { text: string; parentId?: string; quoteOfId?: string; webSearch?: boolean }): Promise<Post> {
   const text = input.text.trim();
   const parent = input.parentId ? await db.posts.get(input.parentId) : undefined;
+  const webSearch = input.webSearch ?? getSettings().webSearch;
   const id = uid();
   const post: Post = {
     id, kind: 'user', text,
@@ -43,6 +44,7 @@ export async function submitPost(input: { text: string; parentId?: string; quote
     quoteOfId: input.quoteOfId,
     rootId: parent?.rootId ?? id,
     status: 'done',
+    webSearch: webSearch || undefined,
     createdAt: Date.now(),
   };
   await db.posts.add(post);
@@ -55,16 +57,20 @@ export async function submitPost(input: { text: string; parentId?: string; quote
     if (author) targets = [author];
   }
   // Replies stream in the background; the UI updates live from the database.
-  for (const p of targets) void runReply(p, post);
+  for (const p of targets) void runReply(p, post, { webSearch });
   return post;
 }
 
 /** Stream a reply from `profile` to `parent`, then run checkers on it. */
-export async function runReply(profile: Profile, parent: Post, opts: { extraUserMessage?: string; respondsToNoteId?: string } = {}): Promise<Post> {
+export async function runReply(profile: Profile, parent: Post, opts: { extraUserMessage?: string; respondsToNoteId?: string; webSearch?: boolean } = {}): Promise<Post> {
+  const wantSearch = opts.webSearch ?? parent.webSearch ?? getSettings().webSearch;
+  const initialCall = modelCall(profile, { webSearch: wantSearch });
   const reply: Post = {
     id: uid(), kind: 'model', profileId: profile.id, text: '',
     parentId: parent.id, rootId: parent.rootId,
-    status: 'streaming', respondsToNoteId: opts.respondsToNoteId, createdAt: Date.now(),
+    status: 'streaming', respondsToNoteId: opts.respondsToNoteId,
+    webSearch: initialCall.searchActive || undefined,
+    createdAt: Date.now(),
   };
   await db.posts.add(reply);
   const ctrl = new AbortController();
@@ -72,10 +78,14 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
 
   let text = '';
   let lastWrite = 0;
-  try {
-    const ctx = await contextFor(await getAncestors(parent));
+  let usedSearch = initialCall.searchActive;
+  const sources: Source[] = [];
+  const seenUrls = new Set<string>();
+
+  async function execute(call: ReturnType<typeof modelCall>, ctx: ContextInput) {
     const result = streamText({
-      model: languageModel(profile),
+      model: call.model,
+      tools: call.tools,
       system: replySystemPrompt(profile, [...ctx.profiles.values()].filter((p) => p.enabled)),
       messages: buildReplyMessages(ctx, profile, opts.extraUserMessage),
       abortSignal: ctrl.signal,
@@ -88,8 +98,29 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
           lastWrite = Date.now();
           await db.posts.update(reply.id, { text });
         }
+      } else if (part.type === 'source' && part.sourceType === 'url' && part.url && !seenUrls.has(part.url) && sources.length < 8) {
+        seenUrls.add(part.url);
+        sources.push({ url: part.url, title: part.title || undefined });
       } else if (part.type === 'error') {
         throw part.error;
+      }
+    }
+    return result;
+  }
+
+  try {
+    const ctx = await contextFor(await getAncestors(parent));
+    let result: Awaited<ReturnType<typeof execute>>;
+    try {
+      result = await execute(initialCall, ctx);
+    } catch (e) {
+      // If a specific model rejects web-search tools/plugins before streaming text, retry once without search.
+      if (initialCall.searchActive && !ctrl.signal.aborted && !text && isSearchUnsupportedError(e)) {
+        usedSearch = false;
+        await db.posts.update(reply.id, { webSearch: undefined });
+        result = await execute(modelCall(profile, { webSearch: false }), ctx);
+      } else {
+        throw e;
       }
     }
     // The SDK ends the stream quietly on abort; treat that as stopped, not finished (and don't check it).
@@ -99,7 +130,13 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
     }
     if (!text.trim()) throw new Error(t('err.empty'));
     const usage = toUsage(await Promise.resolve(result.totalUsage).catch(() => undefined));
-    await db.posts.update(reply.id, { text, status: 'done', usage });
+    await db.posts.update(reply.id, {
+      text,
+      status: 'done',
+      usage,
+      webSearch: usedSearch || undefined,
+      sources: sources.length ? sources : undefined,
+    });
   } catch (e) {
     const aborted = ctrl.signal.aborted;
     const error = aborted ? undefined : friendlyError(e, profile);
@@ -140,11 +177,24 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
   const chain = await getAncestors(post);
   const ctx = await contextFor(chain.slice(0, -1));
   const messages = buildCheckMessages(ctx, post, author);
+  const wantSearch = post.webSearch ?? getSettings().webSearch;
+  const sys = checkerSystemPrompt();
 
   await Promise.all(checkers.map(async (checker) => {
     await db.checks.put({ postId: post.id, profileId: checker.id, verdict: 'pending', createdAt: Date.now() });
     try {
-      const gen = await generateText({ model: languageModel(checker), system: CHECKER_SYSTEM, messages, maxRetries: 0 });
+      const call = modelCall(checker, { webSearch: wantSearch });
+      let gen: Awaited<ReturnType<typeof generateText>>;
+      try {
+        gen = await generateText({ model: call.model, tools: call.tools, system: sys, messages, maxRetries: 0 });
+      } catch (e) {
+        if (call.searchActive && isSearchUnsupportedError(e)) {
+          const fallback = modelCall(checker, { webSearch: false });
+          gen = await generateText({ model: fallback.model, system: sys, messages, maxRetries: 0 });
+        } else {
+          throw e;
+        }
+      }
       const usage = toUsage(gen.totalUsage);
       const result = parseCheckResult(gen.text);
       await serialised(post.id, async () => {
@@ -191,7 +241,7 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
 export async function regenerate(post: Post) {
   if (post.kind !== 'model' || !post.parentId) return;
   const [profile, parent] = await Promise.all([db.profiles.get(post.profileId!), db.posts.get(post.parentId)]);
-  if (profile && parent) await runReply(profile, parent);
+  if (profile && parent) await runReply(profile, parent, { webSearch: getSettings().webSearch });
 }
 
 /** The note's target model answers the note: concede and correct, or push back. */

@@ -21,6 +21,6 @@ function dissentryApi(): Plugin {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), dissentryApi()],
-  build: { outDir: 'dist/web', emptyOutDir: true, chunkSizeWarningLimit: 2000 },
+  build: { outDir: 'dist/web', emptyOutDir: true, chunkSizeWarningLimit: 2500 },
   test: { environment: 'node' },
 } as never);

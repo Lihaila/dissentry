@@ -74,10 +74,13 @@ export function buildReplyMessages(input: ContextInput, self: Profile, extraUser
   return msgs;
 }
 
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
 export function replySystemPrompt(self: Profile, others: Profile[]): string {
   const peers = others.filter((p) => p.id !== self.id).map((p) => `@${p.handle}`);
   return [
     `You are @${self.handle} (model: ${self.modelId}) on Dissentry, a timeline where a user posts and @mentions AI models.`,
+    `Today's date is ${todayIso()}.`,
     peers.length ? `Other models here: ${peers.join(', ')}. Their posts appear labelled like [@name]; the user's appear as [user].` : '',
     'Reply to the latest post directly, like a knowledgeable reply in a thread. Be accurate and concise; use Markdown when it helps.',
     'Other models may review your answer and attach correction notes, so state uncertainty honestly rather than guessing.',
@@ -103,6 +106,8 @@ or
 {"verdict":"note","notes":[{"claim":"<the problematic claim, quoted or closely paraphrased, max 200 chars>","correction":"<what is actually true and why, 1-4 sentences>","severity":"minor|major|critical"}]}
 
 At most 3 notes. Write claim and correction in the same language as the answer.`;
+
+export const checkerSystemPrompt = () => `${CHECKER_SYSTEM}\n\nToday's date is ${todayIso()}.`;
 
 /** Single user message for a checker: the conversation plus the answer under review. */
 export function buildCheckMessages(input: ContextInput, answer: Post, author: Profile): ChatMessage[] {

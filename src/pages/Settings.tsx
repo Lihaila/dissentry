@@ -51,6 +51,10 @@ export function SettingsPage() {
         <input type="checkbox" className="mt-1 accent-amber-500" checked={s.autoCheck} onChange={(e) => updateSettings({ autoCheck: e.target.checked })} />
         <span><b className="text-[15px] text-ink">{t('settings.autoCheck')}</b><br /><span className="text-[13px] text-slate-500">{t('settings.autoCheckDesc')}</span></span>
       </label>
+      <label className={`${section} flex cursor-pointer items-start gap-3`}>
+        <input type="checkbox" className="mt-1 accent-sky-600" checked={s.webSearch} onChange={(e) => updateSettings({ webSearch: e.target.checked })} />
+        <span><b className="text-[15px] text-ink">{t('settings.webSearch')}</b><br /><span className="text-[13px] text-slate-500">{t('settings.webSearchDesc')}</span></span>
+      </label>
       <div className={section}>
         {hasProxy() ? (
           <>
