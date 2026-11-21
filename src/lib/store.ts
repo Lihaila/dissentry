@@ -1,0 +1,83 @@
+// All persistence goes through here, so a sync backend can replace Dexie later without touching the UI.
+import { db } from './db';
+import type { Post, Profile } from './types';
+
+export async function getAncestors(post: Post): Promise<Post[]> {
+  const chain: Post[] = [post];
+  let cur = post;
+  const seen = new Set([post.id]);
+  while (cur.parentId && !seen.has(cur.parentId)) {
+    const parent = await db.posts.get(cur.parentId);
+    if (!parent) break;
+    chain.unshift(parent);
+    seen.add(parent.id);
+    cur = parent;
+  }
+  return chain;
+}
+
+/** Quoted-post chains for every quote in `chain` (quoted post and up to 3 posts above it). */
+export async function getQuotes(chain: Post[]): Promise<Record<string, Post[]>> {
+  const out: Record<string, Post[]> = {};
+  for (const p of chain) {
+    if (!p.quoteOfId || out[p.quoteOfId]) continue;
+    const q = await db.posts.get(p.quoteOfId);
+    if (q) out[q.id] = (await getAncestors(q)).slice(-4);
+  }
+  return out;
+}
+
+export async function profileMap(): Promise<Map<string, Profile>> {
+  const all = await db.profiles.toArray();
+  return new Map(all.map((p) => [p.id, p]));
+}
+
+/** Delete a post, its whole reply subtree, and their notes/checks. */
+export async function deletePostTree(id: string) {
+  await db.transaction('rw', db.posts, db.notes, db.checks, async () => {
+    const ids: string[] = [];
+    const queue = [id];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      ids.push(cur);
+      const kids = await db.posts.where('parentId').equals(cur).primaryKeys();
+      queue.push(...kids);
+    }
+    await db.posts.bulkDelete(ids);
+    await db.notes.where('postId').anyOf(ids).delete();
+    await db.checks.where('postId').anyOf(ids).delete();
+  });
+}
+
+export async function exportAll(includeKeys: boolean) {
+  const profiles = (await db.profiles.toArray()).map((p) => (includeKeys ? p : { ...p, apiKey: '' }));
+  return {
+    app: 'dissentry',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profiles,
+    posts: await db.posts.toArray(),
+    notes: await db.notes.toArray(),
+    checks: await db.checks.toArray(),
+  };
+}
+
+export async function importAll(data: Awaited<ReturnType<typeof exportAll>>) {
+  if (data?.app !== 'dissentry') throw new Error('Not a Dissentry export file');
+  await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, async () => {
+    // Keep existing keys when the import has none.
+    for (const p of data.profiles ?? []) {
+      const existing = await db.profiles.get(p.id);
+      await db.profiles.put({ ...p, apiKey: p.apiKey || existing?.apiKey || '' });
+    }
+    await db.posts.bulkPut(data.posts ?? []);
+    await db.notes.bulkPut(data.notes ?? []);
+    await db.checks.bulkPut(data.checks ?? []);
+  });
+}
+
+export async function clearAll() {
+  await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, async () => {
+    await Promise.all([db.profiles.clear(), db.posts.clear(), db.notes.clear(), db.checks.clear()]);
+  });
+}

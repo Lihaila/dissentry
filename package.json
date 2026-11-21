@@ -1,0 +1,78 @@
+{
+  "name": "dissentry",
+  "version": "0.1.0",
+  "description": "Community Notes for AI answers. Ask one model, let the others dissent. Local-first, bring your own keys (cloud or Ollama/LM Studio).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && tsup",
+    "build:web": "vite build",
+    "start": "node bin/dissentry.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "fact-check",
+    "community-notes",
+    "ollama",
+    "openai",
+    "anthropic",
+    "gemini",
+    "byok",
+    "local-first"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^2.1.11",
+    "hono": "^4.13.19",
+    "undici": "^7.30.2"
+  },
+  "devDependencies": {
+    "@ai-sdk/anthropic": "^4.0.107",
+    "@ai-sdk/google": "^4.0.124",
+    "@ai-sdk/openai-compatible": "^3.0.94",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "ai": "^7.0.179",
+    "dexie": "^4.4.7",
+    "dexie-react-hooks": "^4.4.0",
+    "fake-indexeddb": "^6.2.8",
+    "highlight.js": "^11.12.0",
+    "lucide-react": "^1.77.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "tailwindcss": "^4.3.5",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1",
+    "wouter": "^3.13.0"
+  },
+  "bin": {
+    "dissentry": "bin/dissentry.js"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lihaila/dissentry.git"
+  },
+  "homepage": "https://github.com/Lihaila/dissentry#readme",
+  "bugs": {
+    "url": "https://github.com/Lihaila/dissentry/issues"
+  }
+}
