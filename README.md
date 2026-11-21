@@ -62,10 +62,15 @@ https://github.com/user-attachments/assets/0a38fb4d-9615-4770-bb28-a1867de8e7e5
 **Local** (recommended for local models and maximum privacy; needs Node.js 20+):
 
 ```bash
+# Run immediately (no install required)
 npx dissentry
+
+# Or install globally so you can run `dissentry` anywhere
+npm i -g dissentry
+dissentry
 ```
 
-This opens http://localhost:4317. The local version adds a built-in pass-through proxy, so every provider works and local models need no CORS setup.
+This opens http://localhost:4317. The local version adds a built-in pass-through proxy (so every provider works and local models need no CORS setup) and automatically persists your models, API keys, and threads to `~/.dissentry/data.json` (`0600`).
 
 **Docker:**
 
