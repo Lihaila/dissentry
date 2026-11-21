@@ -6,7 +6,9 @@ import { useProfiles } from '../lib/hooks';
 import { mentionQueryAt, parseMentions } from '../lib/mentions';
 import { displayName, useSettings } from '../lib/settings';
 import type { Profile } from '../lib/types';
+import { closeNewThread } from '../lib/ui';
 import { Avatar } from './Avatar';
+import { OpenRouterButton } from './OpenRouterButton';
 
 interface Props {
   parentId?: string;
@@ -85,10 +87,17 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   }
 
   if (profiles && profiles.length === 0) {
+    // Any choice here leaves the composer, so close the New thread dialog if this is inside it.
     return (
       <div className="px-5 py-6">
         <p className="text-[15px] text-slate-600">{t('composer.noModels')}</p>
-        <Link href="/models" className="mt-3 inline-flex rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">{t('composer.addFirst')}</Link>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <span onClick={closeNewThread}><OpenRouterButton /></span>
+          <Link href="/models?add=1" onClick={closeNewThread}
+            className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-[13.5px] font-semibold text-ink hover:bg-slate-50">
+            {t('composer.addFirst')}
+          </Link>
+        </div>
       </div>
     );
   }

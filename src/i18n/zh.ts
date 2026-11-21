@@ -49,7 +49,7 @@ export const zh: Dict = {
   'composer.placeholder': '问点什么……用@提到模型，例如@{handle}',
   'composer.everyModel': '所有已启用的模型',
   'composer.noModels': '先添加一个模型。云端模型使用你自己的API密钥；本地模型（Ollama、LM Studio）不需要密钥。',
-  'composer.addFirst': '添加第一个模型',
+  'composer.addFirst': "用API密钥添加模型",
   'composer.asking': '提问',
   'composer.checkedBy': '核查',
   'composer.mentionHint': '用@提到模型，或点模型标签',

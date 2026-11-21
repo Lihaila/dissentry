@@ -47,7 +47,7 @@ export const en = {
   'composer.placeholder': 'Ask anything… @mention a model, e.g. @{handle}',
   'composer.everyModel': 'Every enabled model',
   'composer.noModels': 'Add a model to start. Cloud models use your own API key; local models (Ollama, LM Studio) need no key.',
-  'composer.addFirst': 'Add your first model',
+  'composer.addFirst': "Add a model with an API key",
   'composer.asking': 'Asking',
   'composer.checkedBy': 'checked by',
   'composer.mentionHint': 'Mention a model with @ or tap a chip',

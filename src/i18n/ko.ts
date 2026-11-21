@@ -49,7 +49,7 @@ export const ko: Dict = {
   'composer.placeholder': '무엇이든 물어보세요… @로 모델 멘션 (예: @{handle})',
   'composer.everyModel': '활성화된 모든 모델',
   'composer.noModels': '먼저 모델을 추가하세요. 클라우드 모델은 내 API 키를 쓰고, 로컬 모델(Ollama, LM Studio)은 키가 필요 없습니다.',
-  'composer.addFirst': '첫 모델 추가하기',
+  'composer.addFirst': "API 키로 모델 추가",
   'composer.asking': '질문 대상',
   'composer.checkedBy': '검증',
   'composer.mentionHint': '@로 모델을 멘션하거나 칩을 누르세요',

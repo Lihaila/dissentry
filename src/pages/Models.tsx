@@ -1,5 +1,6 @@
 import { generateText } from 'ai';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation, useSearch } from 'wouter';
 import { Avatar } from '../components/Avatar';
 import { PageHeader } from '../components/Layout';
 import { OpenRouterButton } from '../components/OpenRouterButton';
@@ -27,6 +28,15 @@ export function ModelsPage() {
   const profiles = useProfiles();
   const [editing, setEditing] = useState<Profile | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  // /models?add=1 opens the "add model" form straight away (used by "Add your first model").
+  useEffect(() => {
+    if (!profiles || !new URLSearchParams(search).has('add')) return;
+    setEditing(blank('anthropic', profiles.map((p) => p.handle)));
+    setIsNew(true);
+    navigate('/models', { replace: true });
+  }, [search, profiles, navigate]);
   const toggle = (p: Profile, key: 'enabled' | 'isChecker') => db.profiles.update(p.id, { [key]: !p[key] });
 
   return (

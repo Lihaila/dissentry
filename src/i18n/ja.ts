@@ -49,7 +49,7 @@ export const ja: Dict = {
   'composer.placeholder': '何でも質問… @でモデルをメンション（例：@{handle}）',
   'composer.everyModel': '有効なすべてのモデル',
   'composer.noModels': 'まずモデルを追加してください。クラウドのモデルは自分の API キーを使い、ローカルモデル（Ollama、LM Studio）はキー不要です。',
-  'composer.addFirst': '最初のモデルを追加',
+  'composer.addFirst': "API キーでモデルを追加",
   'composer.asking': '質問先',
   'composer.checkedBy': 'チェック',
   'composer.mentionHint': '@でモデルをメンションするか、チップをタップ',
