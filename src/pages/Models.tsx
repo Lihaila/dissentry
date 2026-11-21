@@ -31,9 +31,11 @@ export function ModelsPage() {
     <>
       <PageHeader title="Models" sub="Bring your own keys, cloud or local" />
       {!hasProxy() && (
-        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900">
-          Running without the local server, so some providers may be blocked by browser CORS rules. Run <code className="font-semibold">npx dissentry</code> to use every provider.
-        </p>
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] leading-relaxed text-slate-600">
+          <b>Your keys stay in this browser.</b> Requests go straight from your browser to each provider and never touch our server.
+          For local models, start Ollama with <code className="rounded bg-white px-1">OLLAMA_ORIGINS={location.origin}</code>, or run
+          {' '}<code className="rounded bg-white px-1">npx dissentry</code> on your computer for local models and full privacy.
+        </div>
       )}
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <p className="text-[13px] text-slate-500">Turn on <b>Checker</b> for models that should review other models’ answers.</p>

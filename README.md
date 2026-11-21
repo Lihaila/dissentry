@@ -22,6 +22,12 @@ You decide whether each note is right. Over time, the **Trust** page shows which
 - **Saves money.** Let a cheap or local model answer and a strong model check. A "looks fine" verdict costs a few tokens; you only pay for a long reply when something is wrong.
 - **X-style threads.** Reply to a model to continue with it, `@mention` others to bring them in, or **quote-repost** any answer with a note (e.g. `@gemini is this right?`). The quoted exchange becomes context for the reply.
 
+## Try it
+
+**Hosted:** https://dissentry.lihaila.com. Your keys stay in your browser; requests go straight from your browser to each provider and never touch our server.
+
+**Local (recommended for local models and maximum privacy):** see Quick start.
+
 ## Quick start
 
 ```bash
@@ -50,6 +56,10 @@ docker run -p 4317:4317 dissentry
 ```
 
 To reach Ollama on the host from inside Docker, use `http://host.docker.internal:11434/v1` as the base URL.
+
+### Self-hosting as static files
+
+`npm run build:web` and serve `dist/web` from any static host. Without the local server the app calls providers directly from the browser (all major providers allow this). See `deploy/Caddyfile.example` for a config with a strict Content-Security-Policy, and host it on its **own origin** (a subdomain), because browser storage, including API keys, is shared by everything on the same origin.
 
 ## How it works
 

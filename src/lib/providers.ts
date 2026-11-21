@@ -119,19 +119,24 @@ export function friendlyError(e: unknown, p: Profile): string {
   let msg = err?.message ?? String(e);
   if (err?.responseBody) {
     try {
+      // Providers disagree: {error:{message}}, {error:"text"} (xAI), {message}, {detail}.
       const j = JSON.parse(err.responseBody);
-      msg = j.error?.message ?? j.message ?? msg;
-    } catch { /* keep */ }
+      const fromBody = typeof j.error === 'string' ? j.error : j.error?.message ?? j.message ?? j.detail;
+      if (typeof fromBody === 'string' && fromBody.trim()) msg = fromBody;
+    } catch {
+      if (err.responseBody.trim()) msg = err.responseBody.slice(0, 300);
+    }
   }
+  if (!msg?.trim()) msg = err?.statusCode ? `HTTP ${err.statusCode} from ${p.baseUrl}` : `Request to ${p.baseUrl} failed.`;
   if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
     if (!hasProxy()) {
       return p.baseUrl.includes('localhost') || p.baseUrl.includes('127.0.0.1')
-        ? `Could not reach ${p.baseUrl}. Is it running? Browsers also need CORS: for Ollama start it with OLLAMA_ORIGINS=* ollama serve, or run Dissentry with "npx dissentry".`
-        : `The browser could not reach ${p.baseUrl} (likely blocked by CORS). Run Dissentry locally with "npx dissentry" to use the built-in proxy.`;
+        ? `Could not reach ${p.baseUrl}. Is it running? Ollama must allow this site: start it with OLLAMA_ORIGINS=${location.origin} ollama serve (your browser may also ask to allow local network access). Or run "npx dissentry" on your computer.`
+        : `Your browser could not reach ${p.baseUrl}. If this provider is blocked on your network, turn on your VPN/proxy, or run "npx dissentry" and set a proxy in Settings.`;
     }
     return `Could not reach ${p.baseUrl}. Check Settings → Network proxy.`;
   }
-  if (err?.statusCode === 401 || /401|invalid.*key|unauthori/i.test(msg)) return `Authentication failed for @${p.handle}: check the API key. (${msg})`;
+  if (err?.statusCode === 401 || /\b401\b|(invalid|incorrect|wrong).{0,20}key|key.{0,20}(not valid|invalid)|unauthori|authentication fail/i.test(msg)) return `Authentication failed for @${p.handle}: check the API key. (${msg})`;
   if (err?.statusCode === 404 || /model.*not.*found|does not exist/i.test(msg)) return `Model "${p.modelId}" not found for @${p.handle}. (${msg})`;
   return msg;
 }
