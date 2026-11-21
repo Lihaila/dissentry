@@ -21,7 +21,13 @@ const FEATURES: { icon: typeof Sparkles; title: TKey; body: TKey }[] = [
 ];
 
 const FAQ: [TKey, TKey][] = [
-  ['land.q1', 'land.a1'], ['land.q2', 'land.a2'], ['land.q3', 'land.a3'], ['land.q4', 'land.a4'], ['land.q5', 'land.a5'],
+  ['land.q1', 'land.a1'],
+  ['land.q2', 'land.a2'],
+  ['land.q3', 'land.a3'],
+  ['land.q4', 'land.a4'],
+  ['land.q5', 'land.a5'],
+  ['land.q6', 'land.a6'],
+  ['land.q7', 'land.a7'],
 ];
 
 export function LandingPage() {
