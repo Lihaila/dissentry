@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { fetch as undiciFetch, type Dispatcher } from 'undici';
 import { BYPASS_HEADER, describeProxy, dispatcherFor, envProxyUrl, PROXY_HEADER, validateProxyUrl } from './network';
-import { readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 
 export interface AppOptions {
@@ -9,6 +9,10 @@ export interface AppOptions {
   allowedHosts: string[];
   /** Directory of the built web app. Omit in dev (Vite serves it). */
   webDir?: string;
+  /** Directory for local disk persistence (e.g. ~/.dissentry). Omit to disable disk backup. */
+  dataDir?: string;
+  /** Human-friendly display path for dataFile shown in Settings (e.g. ~/.dissentry/data.json). */
+  dataFileDisplay?: string;
 }
 
 export const TARGET_HEADER = 'x-dissentry-target';
@@ -60,7 +64,47 @@ export function createApp(opts: AppOptions) {
     await next();
   });
 
-  app.get('/api/health', (c) => c.json({ ok: true, proxy: true, systemProxy: describeProxy(envProxyUrl()) ?? null }));
+  const dataFile = opts.dataDir ? join(opts.dataDir, 'data.json') : undefined;
+
+  app.get('/api/health', (c) => c.json({
+    ok: true,
+    proxy: true,
+    systemProxy: describeProxy(envProxyUrl()) ?? null,
+    storage: Boolean(dataFile),
+    dataFile: dataFile ? (opts.dataFileDisplay ?? dataFile) : null,
+  }));
+
+  if (opts.dataDir && dataFile) {
+    const dir = opts.dataDir;
+    const file = dataFile;
+    app.get('/api/storage', async (c) => {
+      try {
+        const raw = await readFile(file, 'utf8');
+        return c.body(raw, 200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      } catch (e) {
+        if ((e as { code?: string }).code === 'ENOENT') return c.json({ empty: true }, 200);
+        return c.json({ error: (e as Error).message }, 500);
+      }
+    });
+
+    app.put('/api/storage', async (c) => {
+      const raw = await c.req.text();
+      if (raw.length > 100 * 1024 * 1024) return c.json({ error: 'Payload too large' }, 413);
+      let parsed: { app?: string };
+      try { parsed = JSON.parse(raw); } catch { return c.json({ error: 'Invalid JSON' }, 400); }
+      if (parsed?.app !== 'dissentry') return c.json({ error: 'Not a Dissentry snapshot' }, 400);
+      await mkdir(dir, { recursive: true, mode: 0o700 });
+      const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+      await writeFile(tmp, raw, { encoding: 'utf8', mode: 0o600 });
+      await rename(tmp, file);
+      return c.json({ ok: true, savedAt: Date.now() });
+    });
+
+    app.delete('/api/storage', async (c) => {
+      await rm(file, { force: true });
+      return c.json({ ok: true });
+    });
+  }
 
   // Stateless pass-through. Keys travel in the request headers and are never stored or logged.
   app.all('/api/proxy', async (c) => {

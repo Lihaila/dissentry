@@ -35,10 +35,11 @@ export function ThreadPage({ id }: { id: string }) {
 
   const { post, ancestors, replies, quotes, root } = data;
   const author = post.profileId ? profiles.get(post.profileId) : undefined;
+  const threadLocal = Boolean(root.localOnly || post.localOnly);
 
   return (
     <>
-      <PageHeader title={threadTitle(root.text, 50, root.attachments?.[0]?.name)} sub={t('thread.title')} back />
+      <PageHeader title={threadTitle(root.text, 50, root.attachments?.[0]?.name)} sub={threadLocal ? `${t('thread.title')} · ${t('route.localOnly')}` : t('thread.title')} back />
       {ancestors.map((a) => <PostCard key={a.id} post={a} profiles={profiles} lineBelow />)}
       <div ref={focusRef} className="scroll-mt-16">
         <PostCard post={post} profiles={profiles} focused onReply={() => setReplyOpen(true)} />
@@ -46,7 +47,7 @@ export function ThreadPage({ id }: { id: string }) {
       {quotes > 0 && <p className="border-t border-slate-100 px-4 py-2 text-[13px] text-slate-500">{t('thread.quoted', { n: quotes })}</p>}
       <div className="border-y border-slate-200/80 bg-slate-50/50">
         {replyOpen || replies.length === 0 ? (
-          <Composer compact key={id} parentId={post.id} autoFocus={replyOpen} implicitHandle={author?.handle}
+          <Composer compact key={id} parentId={post.id} autoFocus={replyOpen} implicitHandle={author?.handle} forceLocalOnly={threadLocal}
             placeholder={author ? t('thread.replyTo', { handle: author.handle }) : t('thread.replyMention')}
             onPosted={() => setReplyOpen(false)} />
         ) : (

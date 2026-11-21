@@ -1,10 +1,11 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/lib/db';
-import { clearAll, deletePostTree, exportAll, getThreadNotes, getThreadPosts, importAll } from '../src/lib/store';
+import { runChecks, runReply } from '../src/lib/engine';
+import { clearAll, deletePostTree, exportAll, getThreadNotes, getThreadPosts, importAll, isThreadLocalOnly } from '../src/lib/store';
 import { getSettings, updateSettings } from '../src/lib/settings';
 import { trackStream, untrackStream } from '../src/lib/streams';
-import type { Post } from '../src/lib/types';
+import type { Post, Profile } from '../src/lib/types';
 
 const p = (id: string, parentId?: string, rootId = 'r'): Post => ({ id, kind: parentId ? 'model' : 'user', text: id, parentId, rootId, status: 'done', createdAt: Date.now() });
 
@@ -86,5 +87,36 @@ describe('shared thread memory', () => {
     expect(getSettings().userName).toBe('Wade');
     expect(getSettings().userAvatar).toBe('data:image/png;base64,AAAA');
     updateSettings({ userName: '', userAvatar: '' });
+  });
+
+  it('enforces local-only thread privacy so cloud models and cloud checkers are never invoked', async () => {
+    await db.profiles.clear();
+    const localProf: Profile = {
+      id: 'loc', handle: 'llama', name: 'Llama', color: '#333', presetId: 'ollama', protocol: 'openai',
+      baseUrl: 'http://localhost:11434/v1', modelId: 'llama3.2', apiKey: '', useProxy: false,
+      systemPrompt: '', enabled: true, isChecker: true, createdAt: 1,
+    };
+    const cloudProf: Profile = {
+      id: 'cld', handle: 'claude', name: 'Claude', color: '#d97', presetId: 'anthropic', protocol: 'anthropic',
+      baseUrl: 'https://api.anthropic.com/v1', modelId: 'claude-sonnet-5-5', apiKey: 'sk-test', useProxy: false,
+      systemPrompt: '', enabled: true, isChecker: true, createdAt: 2,
+    };
+    await db.profiles.bulkAdd([localProf, cloudProf]);
+
+    const root: Post = { id: 'lr', kind: 'user', text: 'private note', rootId: 'lr', status: 'done', localOnly: true, createdAt: 10 };
+    const localAns: Post = { id: 'la', kind: 'model', profileId: 'loc', parentId: 'lr', rootId: 'lr', text: 'local answer', status: 'done', createdAt: 20 };
+    await db.posts.bulkAdd([root, localAns]);
+
+    expect(await isThreadLocalOnly(root)).toBe(true);
+    expect(await isThreadLocalOnly(localAns)).toBe(true);
+
+    // Attempting to run a cloud reply on a local-only thread must refuse without storing or sending anything.
+    const refused = await runReply(cloudProf, root);
+    expect(refused.status).toBe('stopped');
+    expect(await db.posts.get(refused.id)).toBeUndefined();
+
+    // Running checks on a local-only answer must skip cloud checkers (0 checks created for cloudProf).
+    await runChecks(localAns);
+    expect(await db.checks.where('postId').equals('la').count()).toBe(0);
   });
 });

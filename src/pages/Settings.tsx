@@ -1,4 +1,4 @@
-import { Camera, RotateCcw } from 'lucide-react';
+import { Camera, Check, FolderSync, HardDrive, Loader2, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { Avatar } from '../components/Avatar';
@@ -9,18 +9,48 @@ import { ProxySettings } from '../components/ProxySettings';
 import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
 import { AVATAR_ACCEPT, readAvatarImage } from '../lib/files';
+import {
+  canPickBackupFile,
+  getPersistenceState,
+  linkBackupFile,
+  requestBrowserPersistence,
+  syncPersistenceNow,
+  unlinkBackupFile,
+  usePersistence,
+} from '../lib/persistence';
 import { hasProxy } from '../lib/providers';
 import { displayName, updateSettings, useSettings } from '../lib/settings';
 import { clearAll, exportAll, importAll } from '../lib/store';
+import { fullDate } from '../lib/time';
 
 export function SettingsPage() {
   const t = useT();
   const lang = useLang();
   const s = useSettings();
+  const persist = usePersistence();
   const file = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState('');
   const [avatarErr, setAvatarErr] = useState('');
+  const [saveFx, setSaveFx] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function onManualSave(requestFilePermission = false) {
+    if (saveFx === 'saving') return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaveFx('saving');
+    const started = Date.now();
+    await syncPersistenceNow({ requestFilePermission });
+    const wait = Math.max(0, 220 - (Date.now() - started));
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    const after = getPersistenceState();
+    if (after.diskStatus === 'error' || (requestFilePermission && after.backupFileNeedsPerm)) {
+      setSaveFx('idle');
+      return;
+    }
+    setSaveFx('saved');
+    saveTimer.current = setTimeout(() => setSaveFx('idle'), 1800);
+  }
 
   async function onPickAvatar(f: File) {
     setAvatarErr('');
@@ -134,6 +164,126 @@ export function SettingsPage() {
       <div className={section}>
         <h2 className="text-[15px] font-bold text-ink">{t('settings.data')}</h2>
         <p className="mt-1 text-[13px] text-slate-500">{t('settings.dataDesc')}</p>
+
+        {persist.diskEnabled ? (
+          <div className="mt-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/55 p-3.5 text-[13px]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-900">
+                <HardDrive size={15} className="text-emerald-600" />
+                {t('persist.diskTitle')}
+              </span>
+              <button
+                type="button"
+                disabled={saveFx === 'saving'}
+                onClick={() => void onManualSave()}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition active:scale-95 ${
+                  saveFx === 'saved'
+                    ? 'animate-pop border-emerald-500 bg-emerald-600 text-white shadow-xs'
+                    : 'border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50'
+                }`}
+              >
+                {saveFx === 'saving' ? (
+                  <><Loader2 size={12.5} className="animate-spin text-emerald-600" /> {t('persist.saving')}</>
+                ) : saveFx === 'saved' ? (
+                  <><Check size={12.5} strokeWidth={2.8} /> {t('persist.saved')}</>
+                ) : (
+                  t('persist.saveNow')
+                )}
+              </button>
+            </div>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-emerald-900/80">
+              {t('persist.diskDesc')}{' '}
+              {persist.diskPath && <code className="rounded bg-white/90 px-1.5 py-0.5 font-mono text-[11.5px] text-ink ring-1 ring-emerald-200/80">{persist.diskPath}</code>}
+            </p>
+            {persist.diskSavedAt && (
+              <p className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] text-emerald-700">
+                <Check size={12} strokeWidth={2.6} /> {t('persist.lastSaved', { time: fullDate(persist.diskSavedAt) })}
+              </p>
+            )}
+            {persist.diskError && <p className="mt-1 text-[12px] font-medium text-red-600">{persist.diskError}</p>}
+          </div>
+        ) : (
+          <div className="mt-3 space-y-2.5 rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3.5 text-[13px]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 font-semibold text-ink">
+                  <ShieldCheck size={15} className={persist.browserPersisted ? 'text-emerald-600' : 'text-slate-400'} />
+                  <span>{t('persist.browserTitle')}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${
+                    persist.browserPersisted
+                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200/80'
+                      : 'bg-amber-50 text-amber-800 ring-amber-200/80'
+                  }`}>
+                    {persist.browserPersisted ? t('persist.protected') : t('persist.standard')}
+                  </span>
+                </div>
+                <p className="mt-1 text-[12px] leading-relaxed text-slate-500">{t('persist.browserDesc')}</p>
+              </div>
+              {!persist.browserPersisted && (
+                <button type="button" onClick={() => void requestBrowserPersistence()} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-ink hover:bg-slate-50">
+                  {t('persist.request')}
+                </button>
+              )}
+            </div>
+
+            {canPickBackupFile() && (
+              <div className="border-t border-slate-200/70 pt-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-ink">
+                      <FolderSync size={15} className="text-sky-600" />
+                      <span>{t('persist.fileTitle')}</span>
+                    </div>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-slate-500">
+                      {persist.backupFileName
+                        ? t('persist.fileLinked', { name: persist.backupFileName })
+                        : t('persist.fileDesc')}
+                    </p>
+                    {persist.backupFileSavedAt && (
+                      <p className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-emerald-700">
+                        <Check size={12} strokeWidth={2.6} /> {t('persist.lastSaved', { time: fullDate(persist.backupFileSavedAt) })}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {persist.backupFileName ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={saveFx === 'saving'}
+                          onClick={() => void onManualSave(true)}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition active:scale-95 ${
+                            saveFx === 'saved'
+                              ? 'animate-pop border-emerald-500 bg-emerald-600 text-white shadow-xs'
+                              : 'border-slate-200 bg-white text-ink hover:bg-slate-50'
+                          }`}
+                        >
+                          {saveFx === 'saving' ? (
+                            <><Loader2 size={12.5} className="animate-spin text-sky-600" /> {t('persist.saving')}</>
+                          ) : saveFx === 'saved' ? (
+                            <><Check size={12.5} strokeWidth={2.8} /> {t('persist.saved')}</>
+                          ) : persist.backupFileNeedsPerm ? (
+                            t('persist.reconnect')
+                          ) : (
+                            t('persist.saveNow')
+                          )}
+                        </button>
+                        <button type="button" onClick={() => void unlinkBackupFile()} className="rounded-full px-2.5 py-1.5 text-[12px] font-semibold text-slate-500 hover:bg-slate-200/60 hover:text-ink">
+                          {t('persist.unlink')}
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => void linkBackupFile()} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-ink hover:bg-slate-50">
+                        {t('persist.linkFile')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-3 flex flex-wrap gap-2">
           <button className={btn} onClick={() => void doExport(false)}>{t('settings.export')}</button>
           <button className={btn} onClick={() => void doExport(true)}>{t('settings.exportKeys')}</button>
@@ -147,7 +297,7 @@ export function SettingsPage() {
         </div>
         {msg && <p className="mt-2 text-[13px]">{msg}</p>}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-5 text-[13px] text-slate-500">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-5 text-[13px] text-slate-500 md:hidden">
         <Link href="/privacy" className="font-medium transition hover:text-ink hover:underline">{t('footer.privacy')}</Link>
         <Link href="/terms" className="font-medium transition hover:text-ink hover:underline">{t('footer.terms')}</Link>
         <Link href="/welcome" className="transition hover:text-ink hover:underline">{t('layout.about')}</Link>

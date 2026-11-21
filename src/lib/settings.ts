@@ -31,13 +31,17 @@ let current: Settings = (() => {
 })();
 
 export const getSettings = () => current;
+export function subscribeSettings(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
 export function updateSettings(patch: Partial<Settings>) {
   current = { ...current, ...patch };
   try { localStorage.setItem(KEY, JSON.stringify(current)); } catch { /* ignore storage quota errors */ }
   listeners.forEach((l) => l());
 }
 export function useSettings(): Settings {
-  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, getSettings);
+  return useSyncExternalStore(subscribeSettings, getSettings);
 }
 
 /** The user's display name, or a localized "You" when they haven't set one. */

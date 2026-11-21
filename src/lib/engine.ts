@@ -5,9 +5,9 @@ import { t } from '../i18n';
 import { generateMedia } from './media';
 import { parseMentions } from './mentions';
 import { findMatchingNote, maxSeverity, parseCheckResult } from './notes';
-import { friendlyError, isMediaUnsupportedError, isReasoningUnsupportedError, isSearchUnsupportedError, modelCall, profileKind } from './providers';
+import { friendlyError, isLocalProfile, isMediaUnsupportedError, isReasoningUnsupportedError, isSearchUnsupportedError, modelCall, profileKind } from './providers';
 import { getSettings } from './settings';
-import { getQuotes, getThreadNotes, getThreadPosts, profileMap } from './store';
+import { getQuotes, getThreadNotes, getThreadPosts, isThreadLocalOnly, profileMap } from './store';
 import { abortStream, isRunning, trackStream, untrackStream } from './streams';
 import type { Attachment, Note, Post, Profile, Source, Usage } from './types';
 
@@ -61,13 +61,20 @@ export async function submitPost(input: {
   quoteOfId?: string;
   webSearch?: boolean;
   deepThink?: boolean;
+  localOnly?: boolean;
   attachments?: Attachment[];
 }): Promise<Post> {
   const text = input.text.trim();
   const attachments = input.attachments?.length ? input.attachments : undefined;
   const parent = input.parentId ? await db.posts.get(input.parentId) : undefined;
+  const quoted = input.quoteOfId ? await db.posts.get(input.quoteOfId) : undefined;
+  const localOnly = Boolean(
+    input.localOnly ||
+    (parent && (await isThreadLocalOnly(parent))) ||
+    (quoted && (await isThreadLocalOnly(quoted))),
+  );
   const settings = getSettings();
-  const webSearch = input.webSearch ?? settings.webSearch;
+  const webSearch = localOnly ? false : (input.webSearch ?? settings.webSearch);
   const deepThink = input.deepThink ?? settings.deepThink;
   const id = uid();
   const post: Post = {
@@ -78,12 +85,14 @@ export async function submitPost(input: {
     status: 'done',
     webSearch: webSearch || undefined,
     deepThink: deepThink || undefined,
+    localOnly: localOnly || undefined,
     attachments,
     createdAt: Date.now(),
   };
   await db.posts.add(post);
 
-  const profiles = await enabledProfiles();
+  const allEnabled = await enabledProfiles();
+  const profiles = localOnly ? allEnabled.filter(isLocalProfile) : allEnabled;
   const handles = parseMentions(text, profiles.map((p) => p.handle));
   let targets = handles.map((h) => profiles.find((p) => p.handle === h)!).filter(Boolean);
   if (!targets.length && parent?.kind === 'model') {
@@ -91,7 +100,7 @@ export async function submitPost(input: {
     if (author) targets = [author];
   }
   // Replies stream in the background; the UI updates live from the database.
-  for (const p of targets) void runReply(p, post, { webSearch, deepThink });
+  for (const p of targets) void runReply(p, post, { webSearch, deepThink, localOnly });
   return post;
 }
 
@@ -101,13 +110,22 @@ const stripMentions = (text: string) => text.replace(/(^|\s)@[a-z0-9][a-z0-9_.-]
 export async function runReply(
   profile: Profile,
   parent: Post,
-  opts: { extraUserMessage?: string; respondsToNoteId?: string; webSearch?: boolean; deepThink?: boolean } = {},
+  opts: { extraUserMessage?: string; respondsToNoteId?: string; webSearch?: boolean; deepThink?: boolean; localOnly?: boolean } = {},
 ): Promise<Post> {
+  const localOnly = Boolean(opts.localOnly || (await isThreadLocalOnly(parent)));
+  // Hard boundary: never send a local-only thread's content to a cloud model.
+  if (localOnly && !isLocalProfile(profile)) {
+    return {
+      id: uid(), kind: 'model', profileId: profile.id, text: '',
+      parentId: parent.id, rootId: parent.rootId, status: 'stopped', localOnly: true, createdAt: Date.now(),
+    };
+  }
+
   const kind = profileKind(profile);
-  if (kind !== 'chat') return runMediaReply(profile, parent, kind);
+  if (kind !== 'chat') return runMediaReply(profile, parent, kind, localOnly);
 
   const settings = getSettings();
-  const wantSearch = opts.webSearch ?? parent.webSearch ?? settings.webSearch;
+  const wantSearch = localOnly ? false : (opts.webSearch ?? parent.webSearch ?? settings.webSearch);
   const wantThink = (opts.deepThink ?? parent.deepThink ?? settings.deepThink) || !!profile.deepThink;
   const initialCall = modelCall(profile, { webSearch: wantSearch, deepThink: wantThink });
   const reply: Post = {
@@ -116,6 +134,7 @@ export async function runReply(
     status: 'streaming', respondsToNoteId: opts.respondsToNoteId,
     webSearch: initialCall.searchActive || undefined,
     deepThink: initialCall.thinkActive || undefined,
+    localOnly: localOnly || undefined,
     createdAt: Date.now(),
   };
   await db.posts.add(reply);
@@ -243,12 +262,13 @@ export async function runReply(
 }
 
 /** Generate an image, audio clip, or video for a media-generation model profile. */
-async function runMediaReply(profile: Profile, parent: Post, kind: 'image' | 'audio' | 'video'): Promise<Post> {
+async function runMediaReply(profile: Profile, parent: Post, kind: 'image' | 'audio' | 'video', localOnly = false): Promise<Post> {
   const reply: Post = {
     id: uid(), kind: 'model', profileId: profile.id, text: '',
     parentId: parent.id, rootId: parent.rootId,
     status: 'streaming',
     mediaStatus: kind,
+    localOnly: localOnly || undefined,
     createdAt: Date.now(),
   };
   await db.posts.add(reply);
@@ -321,10 +341,12 @@ function serialised<T>(key: string, fn: () => Promise<T>): Promise<T> {
 /** Ask every enabled checker (other than the author) to review a model answer using the shared thread context. */
 export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
   if (post.kind !== 'model' || post.status !== 'done' || !post.text.trim()) return;
+  const localOnly = await isThreadLocalOnly(post);
   const all = await enabledProfiles();
   const author = all.find((p) => p.id === post.profileId) ?? (await db.profiles.get(post.profileId!));
   if (!author) return;
-  const checkers = (only ?? all.filter((p) => p.isChecker && profileKind(p) === 'chat')).filter((p) => p.id !== author.id);
+  const checkers = (only ?? all.filter((p) => p.isChecker && profileKind(p) === 'chat'))
+    .filter((p) => p.id !== author.id && (!localOnly || isLocalProfile(p)));
   if (!checkers.length) return;
 
   const history = (await getThreadPosts(post)).filter((p) => p.id !== post.id);

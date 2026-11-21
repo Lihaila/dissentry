@@ -11,7 +11,7 @@ import { db, uid } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
 import { toHandle } from '../lib/mentions';
 import { PRESETS, presetById } from '../lib/presets';
-import { detectModelKind, friendlyError, hasProxy, languageModel, listModelOptions, profileKind, supportsWebSearch, type ModelOption } from '../lib/providers';
+import { detectModelKind, friendlyError, hasProxy, isLocalProfile, languageModel, listModelOptions, profileKind, supportsWebSearch, type ModelOption } from '../lib/providers';
 import type { ModelKind, Profile } from '../lib/types';
 
 function blank(presetId = 'anthropic', taken: string[] = []): Profile {
@@ -71,6 +71,7 @@ export function ModelsPage() {
           return <Editor key={p.id} value={editing} taken={(profiles ?? []).filter((x) => x.id !== p.id).map((x) => x.handle)} onDone={() => setEditing(null)} />;
         }
         const kind = profileKind(p);
+        const local = isLocalProfile(p);
         return (
           <div key={p.id} className={`border-b border-slate-200/80 px-4 py-3.5 transition hover:bg-slate-50/60 ${p.enabled ? '' : 'opacity-55'}`}>
             <div className="flex items-center gap-3">
@@ -79,6 +80,9 @@ export function ModelsPage() {
                 <div className="flex items-center gap-1.5">
                   <b className="truncate text-ink">{p.name}</b>
                   <span className="truncate text-[13.5px] text-slate-500">@{p.handle}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ${local ? 'bg-emerald-50 text-emerald-700 ring-emerald-200/80' : 'bg-slate-100 text-slate-500 ring-slate-200/80'}`}>
+                    {local ? t('route.local') : t('route.cloud')}
+                  </span>
                   {kind !== 'chat' && <KindBadge kind={kind} />}
                 </div>
                 <div className="truncate text-[12px] text-slate-500">{p.modelId || <i>{t('models.noModel')}</i>} · {presetById(p.presetId).label}</div>

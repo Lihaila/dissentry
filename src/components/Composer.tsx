@@ -1,4 +1,4 @@
-import { ArrowUp, Brain, Check, FileText, Globe, Paperclip, X } from 'lucide-react';
+import { ArrowUp, Brain, Check, Cloud, FileText, Globe, Lock, Paperclip, Shield, X } from 'lucide-react';
 import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { useT } from '../i18n';
@@ -6,7 +6,7 @@ import { submitPost } from '../lib/engine';
 import { FILE_ACCEPT, fmtBytes, MAX_ATTACHMENTS, readAttachments, type FileReject } from '../lib/files';
 import { useProfiles } from '../lib/hooks';
 import { mentionQueryAt, parseMentions } from '../lib/mentions';
-import { profileKind, profileWebSearchEnabled } from '../lib/providers';
+import { isLocalProfile, profileKind, profileWebSearchEnabled } from '../lib/providers';
 import { displayName, updateSettings, useSettings } from '../lib/settings';
 import type { Attachment, Profile } from '../lib/types';
 import { closeNewThread } from '../lib/ui';
@@ -20,11 +20,13 @@ interface Props {
   autoFocus?: boolean;
   /** Handle addressed implicitly (replying to a model post). */
   implicitHandle?: string;
+  /** Lock composer to local models only (inherited from a local-only thread or quoted post). */
+  forceLocalOnly?: boolean;
   onPosted?: (postId: string) => void;
   compact?: boolean;
 }
 
-export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicitHandle, onPosted, compact }: Props) {
+export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicitHandle, forceLocalOnly, onPosted, compact }: Props) {
   const t = useT();
   const profiles = useProfiles();
   const settings = useSettings();
@@ -33,22 +35,38 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachErr, setAttachErr] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [localOnly, setLocalOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState<{ query: string; start: number } | null>(null);
   const [sel, setSel] = useState(0);
   const ta = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const mentioned = parseMentions(text, enabled.map((p) => p.handle));
+  const hasLocalModel = useMemo(() => enabled.some(isLocalProfile), [enabled]);
+  const isLocalLocked = Boolean(forceLocalOnly || localOnly);
+  const pool = useMemo(() => (isLocalLocked ? enabled.filter(isLocalProfile) : enabled), [enabled, isLocalLocked]);
+
+  const mentioned = parseMentions(text, pool.map((p) => p.handle));
   const allMentioned = /(^|\s)@all(?![\w.-])/i.test(text);
-  const askers = mentioned.length ? mentioned : implicitHandle ? [implicitHandle] : [];
-  const askerProfiles = askers.map((h) => enabled.find((p) => p.handle === h)).filter(Boolean) as Profile[];
+  const effectiveImplicit = implicitHandle && pool.some((p) => p.handle === implicitHandle) ? implicitHandle : undefined;
+  const askers = mentioned.length ? mentioned : effectiveImplicit ? [effectiveImplicit] : [];
+  const askerProfiles = askers.map((h) => pool.find((p) => p.handle === h)).filter(Boolean) as Profile[];
   const hasChatAsker = askerProfiles.some((p) => profileKind(p) === 'chat');
-  // A model never checks its own answer, and only chat models act as checkers.
-  const checkers = enabled.filter((p) => p.isChecker && profileKind(p) === 'chat' && !(askers.length === 1 && askers[0] === p.handle));
+  // A model never checks its own answer, only chat models act as checkers, and local-only threads exclude cloud checkers.
+  const checkers = pool.filter((p) => p.isChecker && profileKind(p) === 'chat' && !(askers.length === 1 && askers[0] === p.handle));
+
+  const recipientMap = new Map<string, Profile>();
+  for (const p of askerProfiles) recipientMap.set(p.id, p);
+  if (settings.autoCheck && hasChatAsker) {
+    for (const c of checkers) recipientMap.set(c.id, c);
+  }
+  const recipients = [...recipientMap.values()];
+  const localRecipients = recipients.filter(isLocalProfile);
+  const cloudRecipients = recipients.filter((p) => !isLocalProfile(p));
+
   const matches = menu
-    ? [...enabled.filter((p) => p.handle.startsWith(menu.query) || p.name.toLowerCase().includes(menu.query)),
-       ...(('all'.startsWith(menu.query) && enabled.length > 1) ? [{ id: '__all', handle: 'all', name: t('composer.everyModel') }] : [])].slice(0, 8)
+    ? [...pool.filter((p) => p.handle.startsWith(menu.query) || p.name.toLowerCase().includes(menu.query)),
+       ...(('all'.startsWith(menu.query) && pool.length > 1) ? [{ id: '__all', handle: 'all', name: t('composer.everyModel') }] : [])].slice(0, 8)
     : [];
 
   const refreshMenu = (value: string, caret: number) => { setMenu(mentionQueryAt(value, caret)); setSel(0); };
@@ -130,8 +148,9 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
         text: value,
         parentId,
         quoteOfId,
-        webSearch: settings.webSearch,
+        webSearch: isLocalLocked ? false : settings.webSearch,
         deepThink: settings.deepThink,
+        localOnly: isLocalLocked,
         attachments: files,
       });
       onPosted?.(post.id);
@@ -169,8 +188,10 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   const label = parentId ? t('composer.reply') : quoteOfId ? t('composer.quote') : t('composer.post');
   const canSend = (!!text.trim() || attachments.length > 0) && !busy;
 
+  const cloudHandles = cloudRecipients.map((p) => `@${p.handle}`).join(' ');
+
   const statusLine = (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] text-slate-500">
       {askerProfiles.length > 0 ? (
         <span className="flex items-center gap-1.5">{t('composer.asking')} <AvatarStack profiles={askerProfiles} /></span>
       ) : (
@@ -178,6 +199,31 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
       )}
       {settings.autoCheck && checkers.length > 0 && hasChatAsker && (
         <span className="flex items-center gap-1.5">{t('composer.checkedBy')} <AvatarStack profiles={checkers} /></span>
+      )}
+      {recipients.length > 0 && cloudRecipients.length === 0 && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200/80">
+          <Lock size={10.5} /> {t('route.staysLocal')}
+        </span>
+      )}
+      {localRecipients.length > 0 && cloudRecipients.length > 0 && (
+        <span className="inline-flex flex-wrap items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200/80">
+          <Cloud size={11} className="shrink-0" />
+          <span>{t('route.sharesWithCloud', { handles: cloudHandles })}</span>
+          {!forceLocalOnly && (
+            <button
+              type="button"
+              onClick={() => setLocalOnly(true)}
+              className="rounded-full bg-white px-2 py-px text-[10.5px] font-bold text-emerald-700 ring-1 ring-amber-300/80 transition hover:bg-emerald-50"
+            >
+              {t('route.keepLocal')}
+            </button>
+          )}
+        </span>
+      )}
+      {localRecipients.length === 0 && cloudRecipients.length > 0 && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100/90 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200/80">
+          <Cloud size={10.5} /> {t('route.sentToCloud', { handles: cloudHandles })}
+        </span>
       )}
     </div>
   );
@@ -257,12 +303,13 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
             style={{ fieldSizing: 'content', minHeight: compact ? 42 : 54 } as React.CSSProperties}
           />
 
-          {!parentId && enabled.length > 0 && (
+          {!parentId && pool.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
-              {enabled.slice(0, 10).map((p) => {
+              {pool.slice(0, 10).map((p) => {
                 const on = mentioned.includes(p.handle);
+                const local = isLocalProfile(p);
                 return (
-                  <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId}`}
+                  <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId} (${local ? t('route.local') : t('route.cloud')})`}
                     className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border py-[3px] pl-[3px] pr-2.5 text-[12px] font-medium transition active:scale-[.97] ${
                       on
                         ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
@@ -270,11 +317,12 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                     }`}>
                     <Avatar profile={p} size={19} />
                     <span>@{p.handle}</span>
+                    {local && !on && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title={t('route.local')} />}
                     {on && <Check size={11} strokeWidth={2.8} className="text-sky-600" />}
                   </button>
                 );
               })}
-              {enabled.length > 1 && (
+              {pool.length > 1 && (
                 <button type="button" onClick={() => toggleMention('all')} title={t('composer.everyModel')}
                   className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-[4px] text-[12px] font-medium transition active:scale-[.97] ${
                     allMentioned
@@ -311,7 +359,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
               >
                 <Paperclip size={14.5} />
               </button>
-              {enabled.some(profileWebSearchEnabled) && (
+              {!isLocalLocked && enabled.some(profileWebSearchEnabled) && (
                 <button
                   type="button"
                   onClick={() => updateSettings({ webSearch: !settings.webSearch })}
@@ -327,7 +375,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                   <span>{t('composer.web')}</span>
                 </button>
               )}
-              {enabled.length > 0 && (
+              {pool.length > 0 && (
                 <button
                   type="button"
                   onClick={() => updateSettings({ deepThink: !settings.deepThink })}
@@ -341,6 +389,23 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                 >
                   <Brain size={13.5} />
                   <span>{t('composer.deepThink')}</span>
+                </button>
+              )}
+              {(hasLocalModel || forceLocalOnly) && (
+                <button
+                  type="button"
+                  disabled={forceLocalOnly}
+                  onClick={() => setLocalOnly((v) => !v)}
+                  aria-pressed={isLocalLocked}
+                  title={forceLocalOnly ? t('route.localOnlyLocked') : t('route.localOnlyTip')}
+                  className={`inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-[12px] font-medium transition active:scale-[.97] disabled:cursor-default ${
+                    isLocalLocked
+                      ? 'border-emerald-300/90 bg-emerald-50 text-emerald-700 shadow-2xs'
+                      : 'border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-ink'
+                  }`}
+                >
+                  {isLocalLocked ? <Lock size={13} /> : <Shield size={13} />}
+                  <span>{t('route.localOnly')}</span>
                 </button>
               )}
             </div>
@@ -366,14 +431,22 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
         {menu && matches.length > 0 && (
           <ul className="animate-pop absolute z-40 mt-1.5 w-72 overflow-hidden rounded-2xl border border-slate-200/90 bg-white py-1.5 shadow-xl shadow-slate-900/12">
             {matches.map((m, i) => {
-              const prof = enabled.find((p) => p.id === m.id);
+              const prof = pool.find((p) => p.id === m.id);
+              const local = prof ? isLocalProfile(prof) : false;
               return (
                 <li key={m.id} className="px-1.5">
                   <button type="button" onMouseDown={(e) => { e.preventDefault(); pick(m.handle); }}
                     className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition ${i === sel ? 'bg-slate-100' : 'hover:bg-slate-50'}`}>
                     {prof ? <Avatar profile={prof} size={30} /> : <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-slate-100 text-[10.5px] font-bold text-slate-600">ALL</div>}
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-semibold text-ink">{m.name}</span>
+                      <span className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold text-ink">
+                        <span className="truncate">{m.name}</span>
+                        {prof && (
+                          <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold ${local ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                            {local ? t('route.local') : t('route.cloud')}
+                          </span>
+                        )}
+                      </span>
                       <span className="block truncate text-[11.5px] text-slate-500">@{m.handle}{prof ? ` · ${prof.modelId}` : ''}</span>
                     </span>
                   </button>

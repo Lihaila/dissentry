@@ -182,6 +182,7 @@ import { classifyFile, fmtBytes, readAvatarImage } from '../src/lib/files';
 import { generateMedia, pcmToWavDataUrl } from '../src/lib/media';
 import {
   detectModelKind,
+  isLocalProfile,
   isMediaUnsupportedError,
   isNonChatModel,
   isReasoningUnsupportedError,
@@ -206,6 +207,17 @@ describe('web search & deepthink provider wiring', () => {
     expect(supportsWebSearch(mk('openai', 'https://api.deepseek.com/v1'))).toBe(false);
     expect(profileWebSearchEnabled(mk('openai', 'https://openrouter.ai/api/v1', 'm', { webSearch: false }))).toBe(false);
     expect(profileWebSearchEnabled(mk('openai', 'https://openrouter.ai/api/v1', 'm', { webSearch: true }))).toBe(true);
+  });
+
+  it('accurately distinguishes local vs cloud endpoints', () => {
+    expect(isLocalProfile({ baseUrl: 'http://localhost:11434/v1' })).toBe(true);
+    expect(isLocalProfile({ baseUrl: 'http://127.0.0.1:1234/v1' })).toBe(true);
+    expect(isLocalProfile({ baseUrl: 'http://host.docker.internal:11434/v1' })).toBe(true);
+    expect(isLocalProfile({ baseUrl: 'http://192.168.1.50:8000/v1' })).toBe(true);
+    expect(isLocalProfile({ baseUrl: 'http://mac-studio.local:11434/v1' })).toBe(true);
+    expect(isLocalProfile({ baseUrl: 'https://openrouter.ai/api/v1' })).toBe(false);
+    expect(isLocalProfile({ baseUrl: 'https://api.openai.com/v1' })).toBe(false);
+    expect(isLocalProfile({ baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' })).toBe(false);
   });
   it('sends the right web-search and deepthink payloads on the wire for each provider', async () => {
     async function capture(profile: Profile, opts: { webSearch?: boolean; deepThink?: boolean }) {

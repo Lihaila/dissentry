@@ -13,8 +13,14 @@ const TARGET_HEADER = 'x-dissentry-target';
 
 let proxyAvailable: boolean | null = null;
 let systemProxy: string | null = null;
+let diskStorageAvailable = false;
+let diskStoragePath: string | null = null;
 /** Proxy found in the server's environment (HTTPS_PROXY etc.), as protocol://host:port. */
 export const getSystemProxy = () => systemProxy;
+/** True when the local Dissentry server has automatic disk persistence enabled. */
+export const hasDiskStorage = () => diskStorageAvailable;
+/** Display path of the local disk backup file (e.g. ~/.dissentry/data.json). */
+export const getDiskStoragePath = () => diskStoragePath;
 
 /** Is the local Dissentry server present? (false when the app is hosted as static files.) */
 export async function detectProxy(): Promise<boolean> {
@@ -24,8 +30,12 @@ export async function detectProxy(): Promise<boolean> {
     const j = r.ok ? await r.json() : {};
     proxyAvailable = j.proxy === true;
     systemProxy = j.systemProxy ?? null;
+    diskStorageAvailable = j.storage === true;
+    diskStoragePath = typeof j.dataFile === 'string' ? j.dataFile : null;
   } catch {
     proxyAvailable = false;
+    diskStorageAvailable = false;
+    diskStoragePath = null;
   }
   return proxyAvailable;
 }
@@ -58,6 +68,20 @@ export const proxyFetch: typeof fetch = async (input, init) => {
 export const fetchFor = (p: Profile): typeof fetch => (p.useProxy && hasProxy() ? proxyFetch : fetch);
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '');
+
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0', 'host.docker.internal']);
+
+/** True when this model endpoint runs locally on the user's machine or private LAN (not a cloud API). */
+export function isLocalProfile(p: Pick<Profile, 'baseUrl'>): boolean {
+  try {
+    const h = new URL(p.baseUrl.trim()).hostname.toLowerCase();
+    if (LOCAL_HOSTS.has(h) || h.endsWith('.local')) return true;
+    if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 /** Whether this provider has a native web-search integration Dissentry can enable. */
 export function supportsWebSearch(p: Pick<Profile, 'protocol' | 'baseUrl'>): boolean {

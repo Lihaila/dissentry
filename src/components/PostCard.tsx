@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Download, FileText, Film, Globe, Image as ImageIcon, ImageDown, MessageCircle, Paperclip, Quote, RefreshCw, ScanSearch, Square, Trash2, Volume2, X } from 'lucide-react';
+import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Download, FileText, Film, Globe, Image as ImageIcon, ImageDown, Lock, MessageCircle, Paperclip, Quote, RefreshCw, ScanSearch, Square, Trash2, Volume2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useT } from '../i18n';
@@ -72,6 +72,11 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
           )}
           <span className="text-slate-300">·</span>
           <span className="shrink-0 text-[13px] text-slate-400" title={fullDate(post.createdAt)}>{timeAgo(post.createdAt)}</span>
+          {post.localOnly && !post.parentId && (
+            <span title={t('route.localOnlyLocked')} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-700 ring-1 ring-emerald-200/80">
+              <Lock size={10} /> {t('route.localOnly')}
+            </span>
+          )}
         </div>
         {respondsTo && (
           <p className="mt-0.5 text-[12.5px] text-slate-500">{t('post.respondingTo', { handle: profiles.get(respondsTo.profileId)?.handle ?? '?' })}</p>

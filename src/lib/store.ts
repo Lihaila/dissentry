@@ -1,8 +1,12 @@
 // All persistence goes through here, so a sync backend can replace Dexie later without touching the UI.
 import { db } from './db';
-import { getSettings, updateSettings } from './settings';
+import { getSettings, updateSettings, type Settings } from './settings';
 import { abortAllStreams, abortStream } from './streams';
 import type { Note, Post, Profile } from './types';
+
+let clearHook: (() => Promise<void> | void) | null = null;
+/** Register a callback invoked when clearAll() runs (used by disk persistence). */
+export function onClearAll(fn: () => Promise<void> | void) { clearHook = fn; }
 
 export async function getAncestors(post: Post): Promise<Post[]> {
   const chain: Post[] = [post];
@@ -53,6 +57,16 @@ export async function getThreadNotes(posts: Post[]): Promise<Record<string, Note
   return out;
 }
 
+/** True when `post` or its thread root is locked to local models only. */
+export async function isThreadLocalOnly(post: Pick<Post, 'id' | 'rootId' | 'localOnly'>): Promise<boolean> {
+  if (post.localOnly) return true;
+  if (post.rootId && post.rootId !== post.id) {
+    const root = await db.posts.get(post.rootId);
+    if (root?.localOnly) return true;
+  }
+  return false;
+}
+
 /** Quoted-post chains for every quote in `chain` (quoted post and up to 3 posts above it). */
 export async function getQuotes(chain: Post[]): Promise<Record<string, Post[]>> {
   const out: Record<string, Post[]> = {};
@@ -101,6 +115,7 @@ export async function exportAll(includeKeys: boolean) {
     version: 1,
     exportedAt: new Date().toISOString(),
     userProfile: { userName: s.userName, userAvatar: s.userAvatar },
+    settings: s,
     profiles,
     posts,
     notes: await db.notes.toArray(),
@@ -120,12 +135,22 @@ export async function importAll(data: Partial<Awaited<ReturnType<typeof exportAl
     await db.notes.bulkPut(data.notes ?? []);
     await db.checks.bulkPut(data.checks ?? []);
   });
+  const patch: Partial<Settings> = {};
+  if (data.settings) {
+    if (typeof data.settings.userName === 'string') patch.userName = data.settings.userName;
+    if (typeof data.settings.userAvatar === 'string') patch.userAvatar = data.settings.userAvatar;
+    if (typeof data.settings.autoCheck === 'boolean') patch.autoCheck = data.settings.autoCheck;
+    if (typeof data.settings.webSearch === 'boolean') patch.webSearch = data.settings.webSearch;
+    if (typeof data.settings.deepThink === 'boolean') patch.deepThink = data.settings.deepThink;
+    if (data.settings.proxyMode === 'system' || data.settings.proxyMode === 'direct' || data.settings.proxyMode === 'custom') patch.proxyMode = data.settings.proxyMode;
+    if (typeof data.settings.proxyUrl === 'string') patch.proxyUrl = data.settings.proxyUrl;
+    if (typeof data.settings.proxyBypass === 'string') patch.proxyBypass = data.settings.proxyBypass;
+  }
   if (data.userProfile) {
-    const patch: Partial<{ userName: string; userAvatar: string }> = {};
     if (typeof data.userProfile.userName === 'string') patch.userName = data.userProfile.userName;
     if (typeof data.userProfile.userAvatar === 'string') patch.userAvatar = data.userProfile.userAvatar;
-    if (Object.keys(patch).length) updateSettings(patch);
   }
+  if (Object.keys(patch).length) updateSettings(patch);
 }
 
 export async function clearAll() {
@@ -133,4 +158,5 @@ export async function clearAll() {
   await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, async () => {
     await Promise.all([db.profiles.clear(), db.posts.clear(), db.notes.clear(), db.checks.clear()]);
   });
+  await clearHook?.();
 }

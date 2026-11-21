@@ -1,3 +1,5 @@
+import { mkdtempSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../server/app';
@@ -29,5 +31,41 @@ describe('server guard', () => {
     const r = await req('/landing/thread.webp');
     expect(r.status).toBe(200);
     expect(r.headers.get('content-type')).toBe('image/webp');
+  });
+});
+
+describe('local disk persistence API', () => {
+  it('saves, reads, and deletes snapshots atomically with owner-only permissions', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dissentry-store-'));
+    try {
+      const sApp = createApp({ allowedHosts: ['localhost'], dataDir: dir, dataFileDisplay: '~/.dissentry/data.json' });
+      const call = (path: string, init: RequestInit = {}) =>
+        sApp.request(`http://localhost:4317${path}`, { ...init, headers: { host: 'localhost:4317', ...(init.headers as Record<string, string>) } });
+
+      const health = await (await call('/api/health')).json();
+      expect(health.storage).toBe(true);
+      expect(health.dataFile).toBe('~/.dissentry/data.json');
+
+      expect(await (await call('/api/storage')).json()).toEqual({ empty: true });
+
+      const bad = await call('/api/storage', { method: 'PUT', body: JSON.stringify({ app: 'other' }) });
+      expect(bad.status).toBe(400);
+
+      const snapshot = { app: 'dissentry', version: 1, profiles: [{ id: 'p1', handle: 'llama', apiKey: 'k' }], posts: [] };
+      const put = await call('/api/storage', { method: 'PUT', body: JSON.stringify(snapshot) });
+      expect(put.status).toBe(200);
+
+      const mode = statSync(join(dir, 'data.json')).mode & 0o777;
+      expect(mode).toBe(0o600);
+
+      const loaded = await (await call('/api/storage')).json();
+      expect(loaded).toEqual(snapshot);
+
+      const del = await call('/api/storage', { method: 'DELETE' });
+      expect(del.status).toBe(200);
+      expect(await (await call('/api/storage')).json()).toEqual({ empty: true });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

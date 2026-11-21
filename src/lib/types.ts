@@ -76,6 +76,8 @@ export interface Post {
   webSearch?: boolean;
   /** True when DeepThink (extended reasoning) was enabled for this post. */
   deepThink?: boolean;
+  /** True when this thread is locked to local models only (never sent to cloud models or checkers). */
+  localOnly?: boolean;
   /** Model's reasoning / chain-of-thought summary when DeepThink is active. */
   reasoning?: string;
   /** User-attached images, PDFs, or text/code files. */

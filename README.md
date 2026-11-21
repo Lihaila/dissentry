@@ -36,7 +36,8 @@ You decide whether each note is right, and the **Trust** page shows which models
 - **Or bring your own keys**: OpenAI, Anthropic, Gemini, DeepSeek, Qwen (with 1-click regional & Coding Plan endpoints), xAI, Mistral, Groq, any OpenAI-compatible endpoint, plus **Ollama** and **LM Studio** for local models — with a searchable model picker.
 - **Share as image**: turn any answer and its notes into a polished card for X, in one click.
 - **Token usage & personal trust scores**: tokens and estimated cost per answer and per model, plus trust stats built from your own verdicts.
-- **Private by design**: keys, chats, attachments, generated media, and your custom profile avatar stay in your browser (IndexedDB / localStorage). No accounts, no telemetry.
+- **Local vs. Cloud clarity & Local-only thread lock**: every model is clearly labeled **Local** or **Cloud**, the composer shows before sending whether a post stays on your device or shares context with cloud checkers, and a 1-click **Local only** lock enforces a hard privacy boundary across the entire thread (including replies, quotes, and checks).
+- **Private & persistent by design**: keys, chats, attachments, generated media, and your custom profile avatar stay on your device. Running `npx dissentry` automatically syncs to `~/.dissentry/data.json` (`0600` owner-only permissions) and auto-restores if browser data is cleared; the hosted web app requests browser persistent storage and supports 1-click local JSON file auto-backup. No accounts, no telemetry.
 - **Four languages**: English, 简体中文, 日本語, 한국어.
 - **Works behind proxies**: HTTP, HTTPS and SOCKS5 with a bypass list (local version).
 
@@ -103,7 +104,7 @@ DISSENTRY_LIVE=1 OPENAI_API_KEY=… npx vitest run tests/live.test.ts   # option
 |---|---|
 | `src/lib/engine.ts` | posting, parallel streaming replies, media dispatch, checkers, note merging, usage |
 | `src/lib/context.ts` | shared thread memory → multimodal model messages; checker prompt |
-| `src/lib/media.ts`, `src/lib/files.ts` | image/audio/video generation adapters; local attachment & avatar processing |
+| `src/lib/media.ts`, `src/lib/files.ts`, `src/lib/persistence.ts` | image/audio/video generation; local attachment & avatar processing; disk & file persistence |
 | `src/lib/notes.ts`, `src/lib/claims.ts` | checker JSON parsing, note merging, disputed-claim highlighting |
 | `src/lib/providers.ts`, `src/lib/openrouter.ts` | provider adapters (web search, DeepThink, model picker), OpenRouter sign-in (OAuth PKCE) |
 | `src/i18n/` | UI strings in four languages |
