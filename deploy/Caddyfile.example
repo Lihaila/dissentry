@@ -13,7 +13,7 @@ dissentry.example.com {
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 		# Scripts only from this origin: injected code can't load, which protects keys in IndexedDB.
 		# connect-src stays open to https: so custom OpenAI-compatible endpoints work.
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 	}
 
 	# No server API in hosted mode; the app detects this and calls providers directly.

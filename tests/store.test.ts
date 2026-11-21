@@ -1,7 +1,8 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/lib/db';
-import { clearAll, deletePostTree, getThreadNotes, getThreadPosts } from '../src/lib/store';
+import { clearAll, deletePostTree, exportAll, getThreadNotes, getThreadPosts, importAll } from '../src/lib/store';
+import { getSettings, updateSettings } from '../src/lib/settings';
 import { trackStream, untrackStream } from '../src/lib/streams';
 import type { Post } from '../src/lib/types';
 
@@ -74,5 +75,16 @@ describe('shared thread memory', () => {
     ]);
     const notes = await getThreadNotes([a1]);
     expect(notes.a1?.map((n) => n.id)).toEqual(['n1', 'n3']);
+  });
+
+  it('exports and restores local userName and userAvatar', async () => {
+    updateSettings({ userName: 'Wade', userAvatar: 'data:image/png;base64,AAAA' });
+    const dump = await exportAll(false);
+    expect(dump.userProfile).toEqual({ userName: 'Wade', userAvatar: 'data:image/png;base64,AAAA' });
+    updateSettings({ userName: '', userAvatar: '' });
+    await importAll(dump);
+    expect(getSettings().userName).toBe('Wade');
+    expect(getSettings().userAvatar).toBe('data:image/png;base64,AAAA');
+    updateSettings({ userName: '', userAvatar: '' });
   });
 });

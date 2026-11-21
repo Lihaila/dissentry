@@ -1,13 +1,16 @@
+import { Camera, RotateCcw } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link } from 'wouter';
+import { Avatar } from '../components/Avatar';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/Layout';
 import { lihailaUrl } from '../components/LihaiLa';
 import { ProxySettings } from '../components/ProxySettings';
 import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
+import { AVATAR_ACCEPT, readAvatarImage } from '../lib/files';
 import { hasProxy } from '../lib/providers';
-import { updateSettings, useSettings } from '../lib/settings';
+import { displayName, updateSettings, useSettings } from '../lib/settings';
 import { clearAll, exportAll, importAll } from '../lib/store';
 
 export function SettingsPage() {
@@ -15,7 +18,19 @@ export function SettingsPage() {
   const lang = useLang();
   const s = useSettings();
   const file = useRef<HTMLInputElement>(null);
+  const avatarInput = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState('');
+  const [avatarErr, setAvatarErr] = useState('');
+
+  async function onPickAvatar(f: File) {
+    setAvatarErr('');
+    try {
+      const dataUrl = await readAvatarImage(f);
+      updateSettings({ userAvatar: dataUrl });
+    } catch {
+      setAvatarErr(t('settings.avatarInvalid'));
+    }
+  }
 
   async function doExport(includeKeys: boolean) {
     const data = await exportAll(includeKeys);
@@ -35,7 +50,50 @@ export function SettingsPage() {
       <PageHeader title={t('settings.title')} />
       <div className={section}>
         <h2 className="text-[15px] font-bold text-ink">{t('settings.profile')}</h2>
-        <div className="mt-3 flex flex-wrap items-end gap-6">
+        <div className="mt-3.5 flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={() => avatarInput.current?.click()}
+            title={t('settings.avatarChange')}
+            aria-label={t('settings.avatarChange')}
+            className="group relative shrink-0 rounded-full outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
+          >
+            <Avatar user={displayName(s, t('post.youName'))} size={64} />
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-slate-900/45 text-white opacity-0 transition group-hover:opacity-100">
+              <Camera size={18} />
+            </span>
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className={`${btn} inline-flex items-center gap-1.5`} onClick={() => avatarInput.current?.click()}>
+                <Camera size={14} /> {t('settings.avatarChange')}
+              </button>
+              {s.userAvatar && (
+                <button
+                  type="button"
+                  onClick={() => { updateSettings({ userAvatar: '' }); setAvatarErr(''); }}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-[13px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-ink"
+                >
+                  <RotateCcw size={13.5} /> {t('settings.avatarRemove')}
+                </button>
+              )}
+              <input
+                ref={avatarInput}
+                type="file"
+                accept={AVATAR_ACCEPT}
+                hidden
+                onChange={(e) => {
+                  const picked = e.target.files?.[0];
+                  e.target.value = '';
+                  if (picked) void onPickAvatar(picked);
+                }}
+              />
+            </div>
+            <p className="mt-1.5 text-[12px] text-slate-500">{t('settings.avatarHint')}</p>
+            {avatarErr && <p className="mt-1 text-[12px] font-medium text-red-600">{avatarErr}</p>}
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-end gap-6">
           <label className="block">
             <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-600">{t('settings.name')}</span>
             <input value={s.userName} placeholder={t('post.youName')} onChange={(e) => updateSettings({ userName: e.target.value })}

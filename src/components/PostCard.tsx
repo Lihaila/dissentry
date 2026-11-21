@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, FileText, Globe, ImageDown, MessageCircle, Paperclip, Quote, RefreshCw, ScanSearch, Square, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Download, FileText, Film, Globe, Image as ImageIcon, ImageDown, MessageCircle, Paperclip, Quote, RefreshCw, ScanSearch, Square, Trash2, Volume2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useT } from '../i18n';
@@ -10,7 +10,7 @@ import { displayName, useSettings } from '../lib/settings';
 import { confirmAction } from '../lib/confirm';
 import { deletePostTree } from '../lib/store';
 import { fullDate, timeAgo } from '../lib/time';
-import type { Attachment, Check as CheckRow, Post, Profile } from '../lib/types';
+import type { Attachment, Check as CheckRow, GeneratedMedia, Post, Profile } from '../lib/types';
 import { markClaims } from '../lib/claims';
 import { costOf, fmtCost, fmtTokens } from '../lib/usage';
 import { Avatar } from './Avatar';
@@ -87,7 +87,9 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
             : post.text
               ? <Markdown text={post.status === 'done' ? markClaims(post.text, notes) : post.text} streaming={post.status === 'streaming'} />
               : post.status === 'streaming' && !post.deepThink && (
-                post.webSearch ? (
+                post.mediaStatus ? (
+                  <MediaProgressPill status={post.mediaStatus} />
+                ) : post.webSearch ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50/90 px-2.5 py-1 text-[12.5px] font-medium text-sky-700 ring-1 ring-sky-200/70">
                     <Globe size={13} className="animate-pulse" />
                     {t('post.searching')}<span className="dots"><span>.</span><span>.</span><span>.</span></span>
@@ -97,6 +99,10 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
                 )
               )}
         </div>
+
+        {post.media && post.media.length > 0 && (
+          <MediaGallery media={post.media} />
+        )}
 
         {post.attachments && post.attachments.length > 0 && (
           <AttachmentList attachments={post.attachments} />
@@ -192,8 +198,8 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
               {t('post.stop')}
             </button>
           )}
-          {post.kind === 'model' && post.status === 'done' && <Action label={t('post.checkAgain')} onClick={() => void runChecks(post)} icon={<ScanSearch size={16} />} hover="hover:text-amber-600 hover:bg-amber-50" />}
-          {post.kind === 'model' && post.status === 'done' && <Action label={t('post.share')} onClick={() => setSharing(true)} icon={<ImageDown size={16} />} hover="hover:text-ink hover:bg-slate-100" />}
+          {post.kind === 'model' && post.status === 'done' && post.text.trim() && <Action label={t('post.checkAgain')} onClick={() => void runChecks(post)} icon={<ScanSearch size={16} />} hover="hover:text-amber-600 hover:bg-amber-50" />}
+          {post.kind === 'model' && post.status === 'done' && post.text.trim() && <Action label={t('post.share')} onClick={() => setSharing(true)} icon={<ImageDown size={16} />} hover="hover:text-ink hover:bg-slate-100" />}
           {post.kind === 'model' && post.status !== 'streaming' && <Action label={t('post.regenerate')} onClick={() => void regenerate(post)} icon={<RefreshCw size={15} />} hover="hover:text-violet-600 hover:bg-violet-50" />}
           <Action label={copied ? t('post.copied') : t('post.copy')} onClick={() => { void navigator.clipboard.writeText(post.text); setCopied(true); setTimeout(() => setCopied(false), 1200); }} icon={copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />} hover="hover:text-sky-600 hover:bg-sky-50" />
           <div className="ml-auto">
@@ -268,6 +274,131 @@ function UsageLine({ post, checks, profiles }: { post: Post; checks: CheckRow[];
         {total > 0 && <> · {known ? '' : '≥ '}{fmtCost(total)}</>}
       </span>
     </p>
+  );
+}
+
+function useObjectUrl(blob: Blob | undefined, fallback: string): string {
+  const [url, setUrl] = useState(fallback);
+  useEffect(() => {
+    if (!blob) { setUrl(fallback); return; }
+    const obj = URL.createObjectURL(blob);
+    setUrl(obj);
+    return () => URL.revokeObjectURL(obj);
+  }, [blob, fallback]);
+  return url;
+}
+
+function MediaProgressPill({ status }: { status: string }) {
+  const t = useT();
+  const [kind, phase] = status.split(':');
+  const label = kind === 'audio' ? t('post.generatingAudio') : kind === 'video' ? t('post.generatingVideo') : t('post.generatingImage');
+  const style =
+    kind === 'audio' ? 'bg-teal-50/90 text-teal-700 ring-teal-200/70'
+    : kind === 'video' ? 'bg-indigo-50/90 text-indigo-700 ring-indigo-200/70'
+    : 'bg-sky-50/90 text-sky-700 ring-sky-200/70';
+  const Icon = kind === 'audio' ? Volume2 : kind === 'video' ? Film : ImageIcon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium ring-1 ${style}`}>
+      <Icon size={13} className="animate-pulse" />
+      {label}{phase ? ` · ${phase}` : ''}<span className="dots"><span>.</span><span>.</span><span>.</span></span>
+    </span>
+  );
+}
+
+function MediaGallery({ media }: { media: GeneratedMedia[] }) {
+  const t = useT();
+  const [lightbox, setLightbox] = useState<GeneratedMedia | null>(null);
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox]);
+
+  return (
+    <div data-no-open className="mt-2.5 space-y-2.5" onClick={(e) => e.stopPropagation()}>
+      {media.map((m) =>
+        m.kind === 'image' ? (
+          <div key={m.id} className="group relative inline-block max-w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50">
+            <button type="button" onClick={() => setLightbox(m)} className="block cursor-zoom-in">
+              <img src={m.url} alt={m.name ?? 'Generated image'} className="max-h-[460px] max-w-full object-contain" />
+            </button>
+            <a
+              href={m.url}
+              download={m.name ?? 'image.png'}
+              title={t('post.download')}
+              aria-label={t('post.download')}
+              className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-slate-900/75 px-2.5 py-1 text-[11.5px] font-semibold text-white opacity-90 backdrop-blur-xs transition hover:bg-slate-900 group-hover:opacity-100"
+            >
+              <Download size={12} /> {t('post.download')}
+            </a>
+          </div>
+        ) : m.kind === 'audio' ? (
+          <AudioItem key={m.id} item={m} />
+        ) : (
+          <VideoItem key={m.id} item={m} />
+        ),
+      )}
+
+      {lightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={lightbox.name ?? 'Generated image'}
+          onClick={() => setLightbox(null)}
+          className="animate-backdrop fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-slate-950/80 p-4 backdrop-blur-xs"
+        >
+          <div className="relative flex max-h-[90vh] max-w-[92vw] flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLightbox(null)}
+              aria-label={t('common.close')}
+              className="absolute -right-2 -top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/90 text-white shadow-lg ring-1 ring-white/20 transition hover:bg-slate-800"
+            >
+              <X size={18} />
+            </button>
+            <img src={lightbox.url} alt={lightbox.name ?? 'Generated image'} className="max-h-[84vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AudioItem({ item }: { item: GeneratedMedia }) {
+  const t = useT();
+  const src = useObjectUrl(item.blob, item.url);
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-200/90 bg-slate-50/85 p-3">
+      <audio controls src={src} className="h-9 min-w-[200px] flex-1" />
+      <a
+        href={src}
+        download={item.name ?? 'audio.mp3'}
+        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-ink"
+      >
+        <Download size={13} /> {t('post.download')}
+      </a>
+    </div>
+  );
+}
+
+function VideoItem({ item }: { item: GeneratedMedia }) {
+  const t = useT();
+  const src = useObjectUrl(item.blob, item.url);
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-950">
+      <video controls playsInline src={src} className="max-h-[460px] w-full bg-black" />
+      <div className="flex items-center justify-between bg-slate-50 px-3 py-2 text-[12px] text-slate-500">
+        <span className="truncate font-medium text-ink">{item.name ?? 'video.mp4'}</span>
+        <a
+          href={src}
+          download={item.name ?? 'video.mp4'}
+          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11.5px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-ink"
+        >
+          <Download size={12} /> {t('post.download')}
+        </a>
+      </div>
+    </div>
   );
 }
 

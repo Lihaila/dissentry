@@ -7,6 +7,7 @@ import { useProfiles } from '../lib/hooks';
 import { openNewThread, threadTitle } from '../lib/ui';
 import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
+import { profileKind } from '../lib/providers';
 import { deletePostTree } from '../lib/store';
 import { Avatar } from './Avatar';
 import { ConfirmHost } from './ConfirmHost';
@@ -172,29 +173,42 @@ function RightPanel() {
         </div>
         {enabled.length === 0 && <p className="text-[13px] leading-relaxed text-slate-500">{t('panel.noModels')}</p>}
         <ul className="space-y-1">
-          {enabled.map((p) => (
-            <li key={p.id} className="group -mx-1.5 flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 transition hover:bg-slate-50">
-              <Avatar profile={p} size={32} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[13.5px] font-semibold leading-tight text-ink">{p.name}</div>
-                <div className="truncate text-[11.5px] text-slate-500">@{p.handle} · {p.modelId}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => toggleChecker(p.id, p.isChecker)}
-                title={t('editor.checker')}
-                aria-pressed={p.isChecker}
-                className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition ${
-                  p.isChecker
-                    ? 'bg-amber-100/90 text-amber-800 ring-1 ring-amber-200/80 hover:bg-amber-200/70'
-                    : 'text-slate-400 opacity-0 ring-1 ring-slate-200 hover:bg-white hover:text-slate-600 focus:opacity-100 group-hover:opacity-100'
-                }`}
-              >
-                {p.isChecker && <Check size={10} strokeWidth={3} />}
-                {t('common.checker')}
-              </button>
-            </li>
-          ))}
+          {enabled.map((p) => {
+            const k = profileKind(p);
+            return (
+              <li key={p.id} className="group -mx-1.5 flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 transition hover:bg-slate-50">
+                <Avatar profile={p} size={32} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13.5px] font-semibold leading-tight text-ink">{p.name}</div>
+                  <div className="truncate text-[11.5px] text-slate-500">@{p.handle} · {p.modelId}</div>
+                </div>
+                {k === 'chat' ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleChecker(p.id, p.isChecker)}
+                    title={t('editor.checker')}
+                    aria-pressed={p.isChecker}
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition ${
+                      p.isChecker
+                        ? 'bg-amber-100/90 text-amber-800 ring-1 ring-amber-200/80 hover:bg-amber-200/70'
+                        : 'text-slate-400 opacity-0 ring-1 ring-slate-200 hover:bg-white hover:text-slate-600 focus:opacity-100 group-hover:opacity-100'
+                    }`}
+                  >
+                    {p.isChecker && <Check size={10} strokeWidth={3} />}
+                    {t('common.checker')}
+                  </button>
+                ) : (
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ring-1 ${
+                    k === 'image' ? 'bg-sky-50 text-sky-700 ring-sky-200/80'
+                    : k === 'audio' ? 'bg-teal-50 text-teal-700 ring-teal-200/80'
+                    : 'bg-indigo-50 text-indigo-700 ring-indigo-200/80'
+                  }`}>
+                    {t(`kind.${k}`)}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
         <Link href="/models?add=1" className="mt-3 flex items-center gap-1.5 rounded-xl border border-dashed border-slate-200 px-3 py-2 text-[12.5px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-ink">
           <Plus size={14} /> {t('panel.addModel')}

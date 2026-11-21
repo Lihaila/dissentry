@@ -1,5 +1,6 @@
 // All persistence goes through here, so a sync backend can replace Dexie later without touching the UI.
 import { db } from './db';
+import { getSettings, updateSettings } from './settings';
 import { abortAllStreams, abortStream } from './streams';
 import type { Note, Post, Profile } from './types';
 
@@ -89,18 +90,25 @@ export async function deletePostTree(id: string): Promise<string[]> {
 
 export async function exportAll(includeKeys: boolean) {
   const profiles = (await db.profiles.toArray()).map((p) => (includeKeys ? p : { ...p, apiKey: '' }));
+  const posts = (await db.posts.toArray()).map((post) =>
+    post.media?.some((m) => m.blob)
+      ? { ...post, media: post.media.map(({ blob: _b, ...rest }) => rest) }
+      : post,
+  );
+  const s = getSettings();
   return {
     app: 'dissentry',
     version: 1,
     exportedAt: new Date().toISOString(),
+    userProfile: { userName: s.userName, userAvatar: s.userAvatar },
     profiles,
-    posts: await db.posts.toArray(),
+    posts,
     notes: await db.notes.toArray(),
     checks: await db.checks.toArray(),
   };
 }
 
-export async function importAll(data: Awaited<ReturnType<typeof exportAll>>) {
+export async function importAll(data: Partial<Awaited<ReturnType<typeof exportAll>>>) {
   if (data?.app !== 'dissentry') throw new Error('Not a Dissentry export file');
   await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, async () => {
     // Keep existing keys when the import has none.
@@ -112,6 +120,12 @@ export async function importAll(data: Awaited<ReturnType<typeof exportAll>>) {
     await db.notes.bulkPut(data.notes ?? []);
     await db.checks.bulkPut(data.checks ?? []);
   });
+  if (data.userProfile) {
+    const patch: Partial<{ userName: string; userAvatar: string }> = {};
+    if (typeof data.userProfile.userName === 'string') patch.userName = data.userProfile.userName;
+    if (typeof data.userProfile.userAvatar === 'string') patch.userAvatar = data.userProfile.userAvatar;
+    if (Object.keys(patch).length) updateSettings(patch);
+  }
 }
 
 export async function clearAll() {

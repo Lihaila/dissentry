@@ -6,7 +6,7 @@ import { submitPost } from '../lib/engine';
 import { FILE_ACCEPT, fmtBytes, MAX_ATTACHMENTS, readAttachments, type FileReject } from '../lib/files';
 import { useProfiles } from '../lib/hooks';
 import { mentionQueryAt, parseMentions } from '../lib/mentions';
-import { profileWebSearchEnabled } from '../lib/providers';
+import { profileKind, profileWebSearchEnabled } from '../lib/providers';
 import { displayName, updateSettings, useSettings } from '../lib/settings';
 import type { Attachment, Profile } from '../lib/types';
 import { closeNewThread } from '../lib/ui';
@@ -43,8 +43,9 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   const allMentioned = /(^|\s)@all(?![\w.-])/i.test(text);
   const askers = mentioned.length ? mentioned : implicitHandle ? [implicitHandle] : [];
   const askerProfiles = askers.map((h) => enabled.find((p) => p.handle === h)).filter(Boolean) as Profile[];
-  // A model never checks its own answer, so a sole asker is left out of the checker list.
-  const checkers = enabled.filter((p) => p.isChecker && !(askers.length === 1 && askers[0] === p.handle));
+  const hasChatAsker = askerProfiles.some((p) => profileKind(p) === 'chat');
+  // A model never checks its own answer, and only chat models act as checkers.
+  const checkers = enabled.filter((p) => p.isChecker && profileKind(p) === 'chat' && !(askers.length === 1 && askers[0] === p.handle));
   const matches = menu
     ? [...enabled.filter((p) => p.handle.startsWith(menu.query) || p.name.toLowerCase().includes(menu.query)),
        ...(('all'.startsWith(menu.query) && enabled.length > 1) ? [{ id: '__all', handle: 'all', name: t('composer.everyModel') }] : [])].slice(0, 8)
@@ -175,7 +176,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
       ) : (
         <span className="text-slate-400">{t('composer.mentionHint')}</span>
       )}
-      {settings.autoCheck && checkers.length > 0 && askerProfiles.length > 0 && (
+      {settings.autoCheck && checkers.length > 0 && hasChatAsker && (
         <span className="flex items-center gap-1.5">{t('composer.checkedBy')} <AvatarStack profiles={checkers} /></span>
       )}
     </div>

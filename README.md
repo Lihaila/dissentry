@@ -23,12 +23,14 @@ You decide whether each note is right, and the **Trust** page shows which models
 ## Features
 
 - **Community notes for AI answers**: checkers speak up only when something is wrong; duplicate notes merge into a consensus.
+- **Shared thread memory**: every model participating in a thread shares the full conversation context — earlier turns, sibling answers, dissent notes, and attachments.
+- **Native Web Search & DeepThink**: toggle live web search (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen) and DeepThink extended reasoning globally, per message, or per model, with collapsible thought-process panels and cited source pills.
+- **Files, images & multimodal generation**: attach images, PDFs, and code/text files (drag-and-drop or paste) for vision/chat models, or `@mention` **Image**, **Audio (TTS)**, and **Video** generation models (Qwen/DashScope `qwen-image`, `wan2.7-image`, `qwen3-tts-flash`, `wan2.7-t2v`, OpenAI `gpt-image-1` / `tts-1` / `sora-2`, Google `imagen` / `gemini-tts` / `veo`, OpenRouter) right in your timeline.
 - **Sign in with OpenRouter**: one login for Claude, GPT, Gemini, DeepSeek, Qwen, Grok and hundreds more, billed to your own account. No keys to copy.
-- **Or bring your own keys**: OpenAI, Anthropic, Gemini, DeepSeek, Qwen, xAI, Mistral, Groq, any OpenAI-compatible endpoint, plus **Ollama** and **LM Studio** for local models.
+- **Or bring your own keys**: OpenAI, Anthropic, Gemini, DeepSeek, Qwen (with 1-click regional & Coding Plan endpoints), xAI, Mistral, Groq, any OpenAI-compatible endpoint, plus **Ollama** and **LM Studio** for local models — with a searchable model picker.
 - **Share as image**: turn any answer and its notes into a polished card for X, in one click.
-- **Token usage**: tokens and estimated cost per answer, per model, and how much checking costs compared with answering.
-- **Trust scores**: built from your own verdicts, not someone else’s benchmark.
-- **Private by design**: keys and chats live in your browser (IndexedDB). No accounts, no telemetry.
+- **Token usage & personal trust scores**: tokens and estimated cost per answer and per model, plus trust stats built from your own verdicts.
+- **Private by design**: keys, chats, attachments, generated media, and your custom profile avatar stay in your browser (IndexedDB / localStorage). No accounts, no telemetry.
 - **Four languages**: English, 简体中文, 日本語, 한국어.
 - **Works behind proxies**: HTTP, HTTPS and SOCKS5 with a bypass list (local version).
 
@@ -93,10 +95,11 @@ DISSENTRY_LIVE=1 OPENAI_API_KEY=… npx vitest run tests/live.test.ts   # option
 
 | Path | What |
 |---|---|
-| `src/lib/engine.ts` | posting, parallel streaming replies, checkers, note merging, usage |
-| `src/lib/context.ts` | thread → model messages; checker prompt |
+| `src/lib/engine.ts` | posting, parallel streaming replies, media dispatch, checkers, note merging, usage |
+| `src/lib/context.ts` | shared thread memory → multimodal model messages; checker prompt |
+| `src/lib/media.ts`, `src/lib/files.ts` | image/audio/video generation adapters; local attachment & avatar processing |
 | `src/lib/notes.ts`, `src/lib/claims.ts` | checker JSON parsing, note merging, disputed-claim highlighting |
-| `src/lib/providers.ts`, `src/lib/openrouter.ts` | provider adapters, OpenRouter sign-in (OAuth PKCE) |
+| `src/lib/providers.ts`, `src/lib/openrouter.ts` | provider adapters (web search, DeepThink, model picker), OpenRouter sign-in (OAuth PKCE) |
 | `src/i18n/` | UI strings in four languages |
 | `server/` | local proxy and static server |
 

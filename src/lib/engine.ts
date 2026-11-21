@@ -2,9 +2,10 @@ import { generateText, streamText } from 'ai';
 import { db, uid } from './db';
 import { buildCheckMessages, buildReplyMessages, checkerSystemPrompt, hasBinaryAttachments, replySystemPrompt, type ContextInput } from './context';
 import { t } from '../i18n';
+import { generateMedia } from './media';
 import { parseMentions } from './mentions';
 import { findMatchingNote, maxSeverity, parseCheckResult } from './notes';
-import { friendlyError, isMediaUnsupportedError, isReasoningUnsupportedError, isSearchUnsupportedError, modelCall } from './providers';
+import { friendlyError, isMediaUnsupportedError, isReasoningUnsupportedError, isSearchUnsupportedError, modelCall, profileKind } from './providers';
 import { getSettings } from './settings';
 import { getQuotes, getThreadNotes, getThreadPosts, profileMap } from './store';
 import { abortStream, isRunning, trackStream, untrackStream } from './streams';
@@ -94,12 +95,17 @@ export async function submitPost(input: {
   return post;
 }
 
+const stripMentions = (text: string) => text.replace(/(^|\s)@[a-z0-9][a-z0-9_.-]*/gi, '$1').replace(/\s+/g, ' ').trim();
+
 /** Stream a reply from `profile` to `parent`, sharing the full thread memory, then run checkers on it. */
 export async function runReply(
   profile: Profile,
   parent: Post,
   opts: { extraUserMessage?: string; respondsToNoteId?: string; webSearch?: boolean; deepThink?: boolean } = {},
 ): Promise<Post> {
+  const kind = profileKind(profile);
+  if (kind !== 'chat') return runMediaReply(profile, parent, kind);
+
   const settings = getSettings();
   const wantSearch = opts.webSearch ?? parent.webSearch ?? settings.webSearch;
   const wantThink = (opts.deepThink ?? parent.deepThink ?? settings.deepThink) || !!profile.deepThink;
@@ -236,6 +242,73 @@ export async function runReply(
   return done;
 }
 
+/** Generate an image, audio clip, or video for a media-generation model profile. */
+async function runMediaReply(profile: Profile, parent: Post, kind: 'image' | 'audio' | 'video'): Promise<Post> {
+  const reply: Post = {
+    id: uid(), kind: 'model', profileId: profile.id, text: '',
+    parentId: parent.id, rootId: parent.rootId,
+    status: 'streaming',
+    mediaStatus: kind,
+    createdAt: Date.now(),
+  };
+  await db.posts.add(reply);
+  const ctrl = new AbortController();
+  trackStream(reply.id, ctrl);
+
+  try {
+    const thread = await getThreadPosts(parent, [reply.id]);
+    const latestPrompt = stripMentions(parent.text);
+    // If replying inside a thread with an image/edit follow-up, carry forward the latest reference image if needed.
+    const directImgs = (parent.attachments ?? []).filter((a) => a.kind === 'image' && a.dataUrl);
+    let refImages: Attachment[] = directImgs;
+    if (!refImages.length) {
+      for (let i = thread.length - 1; i >= 0; i--) {
+        const p = thread[i];
+        const attImgs = (p.attachments ?? []).filter((a) => a.kind === 'image' && a.dataUrl);
+        if (attImgs.length) { refImages = attImgs.slice(0, 2); break; }
+        const genImg = (p.media ?? []).find((m) => m.kind === 'image' && m.url);
+        if (genImg) {
+          refImages = [{ id: genImg.id, name: genImg.name ?? 'image.png', mediaType: genImg.mediaType, size: 0, kind: 'image', dataUrl: genImg.url }];
+          break;
+        }
+      }
+    }
+    const prompt = latestPrompt || parent.text.trim() || refImages.map((r) => r.name).join(', ');
+    if (!prompt) throw new Error(t('err.empty'));
+
+    const res = await generateMedia({
+      profile,
+      kind,
+      prompt,
+      refImages,
+      signal: ctrl.signal,
+      onProgress: (st) => { void db.posts.update(reply.id, { mediaStatus: `${kind}:${st}` }); },
+    });
+    if (ctrl.signal.aborted) {
+      await db.posts.update(reply.id, { status: 'stopped', mediaStatus: undefined });
+      return (await db.posts.get(reply.id)) ?? { ...reply, status: 'stopped', mediaStatus: undefined };
+    }
+    await db.posts.update(reply.id, {
+      text: res.text ?? '',
+      media: res.media,
+      mediaStatus: undefined,
+      status: 'done',
+    });
+    return (await db.posts.get(reply.id)) ?? { ...reply, text: res.text ?? '', media: res.media, mediaStatus: undefined, status: 'done' };
+  } catch (e) {
+    const aborted = ctrl.signal.aborted;
+    const error = aborted ? undefined : friendlyError(e, profile);
+    await db.posts.update(reply.id, {
+      status: aborted ? 'stopped' : 'error',
+      mediaStatus: undefined,
+      error,
+    });
+    return (await db.posts.get(reply.id)) ?? { ...reply, status: aborted ? 'stopped' : 'error', mediaStatus: undefined, error };
+  } finally {
+    untrackStream(reply.id);
+  }
+}
+
 // Notes for one post are merged one checker at a time, so parallel checkers don't create duplicates.
 const mergeQueues = new Map<string, Promise<unknown>>();
 function serialised<T>(key: string, fn: () => Promise<T>): Promise<T> {
@@ -247,11 +320,11 @@ function serialised<T>(key: string, fn: () => Promise<T>): Promise<T> {
 
 /** Ask every enabled checker (other than the author) to review a model answer using the shared thread context. */
 export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
-  if (post.kind !== 'model' || post.status !== 'done') return;
+  if (post.kind !== 'model' || post.status !== 'done' || !post.text.trim()) return;
   const all = await enabledProfiles();
   const author = all.find((p) => p.id === post.profileId) ?? (await db.profiles.get(post.profileId!));
   if (!author) return;
-  const checkers = (only ?? all.filter((p) => p.isChecker)).filter((p) => p.id !== author.id);
+  const checkers = (only ?? all.filter((p) => p.isChecker && profileKind(p) === 'chat')).filter((p) => p.id !== author.id);
   if (!checkers.length) return;
 
   const history = (await getThreadPosts(post)).filter((p) => p.id !== post.id);

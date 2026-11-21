@@ -1,8 +1,22 @@
 import { logoFor } from '../lib/logos';
+import { useSettings } from '../lib/settings';
 import type { Profile } from '../lib/types';
 
-export function Avatar({ profile, size = 40, user }: { profile?: Profile; size?: number; user?: string }) {
+export function Avatar({ profile, size = 40, user, avatarUrl }: { profile?: Profile; size?: number; user?: string; avatarUrl?: string }) {
+  const settings = useSettings();
   if (user !== undefined) {
+    const src = avatarUrl !== undefined ? avatarUrl : settings.userAvatar;
+    if (src) {
+      return (
+        <div
+          className="shrink-0 select-none overflow-hidden rounded-full border border-slate-200/90 bg-slate-100"
+          style={{ width: size, height: size }}
+          aria-hidden
+        >
+          <img src={src} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        </div>
+      );
+    }
     return (
       <div className="flex shrink-0 select-none items-center justify-center rounded-full bg-sky-500 font-semibold text-white"
         style={{ width: size, height: size, fontSize: size * 0.4 }} aria-hidden>

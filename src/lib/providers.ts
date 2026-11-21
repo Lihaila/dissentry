@@ -5,7 +5,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { LanguageModel, ToolSet, streamText } from 'ai';
 import { t } from '../i18n';
 import { getSettings } from './settings';
-import type { Profile } from './types';
+import type { ModelKind, Profile } from './types';
 
 type ProviderOptions = NonNullable<Parameters<typeof streamText>[0]['providerOptions']>;
 
@@ -211,28 +211,128 @@ export function isMediaUnsupportedError(e: unknown): boolean {
   return false;
 }
 
-/** List model IDs available to this profile's key. */
-export async function listModels(p: Pick<Profile, 'protocol' | 'baseUrl' | 'apiKey' | 'useProxy'>): Promise<string[]> {
-  const f = p.useProxy && hasProxy() ? proxyFetch : fetch;
-  const base = trimSlash(p.baseUrl);
+export interface ModelOption {
+  id: string;
+  name?: string;
+  inPrice?: number;
+  outPrice?: number;
+  /** Detected model capability: chat, image, audio, video, or other (embeddings/rerank/ASR). */
+  kind: ModelKind | 'other';
+}
+
+const OTHER_MODEL = new RegExp(
+  '(^|[/:._-])(' +
+    [
+      'embed(?:ding)?s?', 'rerank(?:er)?', 'moderation', 'aqa',
+      'whisper', 'asr', 'transcribe', 'paraformer', 'sensevoice', 'fun-?asr', 'gummy',
+      'realtime', 'babbage', 'davinci', 'wordart', 'facechain', 'farui',
+    ].join('|') +
+    ')($|[/:._-])',
+  'i',
+);
+
+const VIDEO_MODEL = new RegExp(
+  '(^|[/:._-])(' +
+    [
+      'sora', 'veo', 't2v', 'i2v', 'r2v', 'kf2v', 's2v', 'v2v', 'vace', 'video(?:edit)?', 'liveportrait', 'animate-?anyone', 'videoretalk', 'emo',
+      'kling', 'runway', 'pika', 'luma', 'hailuo', 'seedance', 'vidu',
+    ].join('|') +
+    ')($|[/:._-])',
+  'i',
+);
+
+const AUDIO_MODEL = new RegExp(
+  '(^|[/:._-])(tts|cosyvoice|sambert|lyria|speech|audio-?gen|music)($|[/:._-])',
+  'i',
+);
+
+const IMAGE_MODEL = new RegExp(
+  '(^|[/:._-])(' +
+    [
+      'dall-?e', 'imagen', 'flux', 'sdxl', 'stable-?diffusion', 'recraft', 'ideogram', 'midjourney', 'kolors',
+      'wanx\\d*', 'wan\\d+(?:\\.\\d+)?', 'image', 't2i', 'i2i', 'img2img', 'txt2img', 'seedream', 'cogview',
+    ].join('|') +
+    ')($|[/:._-])',
+  'i',
+);
+
+/** Classify a model ID into chat, image, audio, video, or non-generative utility ('other'). */
+export function detectModelKind(id: string): ModelKind | 'other' {
+  if (OTHER_MODEL.test(id)) return 'other';
+  if (VIDEO_MODEL.test(id)) return 'video';
+  if (AUDIO_MODEL.test(id)) return 'audio';
+  if (IMAGE_MODEL.test(id)) return 'image';
+  return 'chat';
+}
+
+/** Resolve the active capability mode for a Profile (falls back to auto-detection from modelId). */
+export function profileKind(p: Pick<Profile, 'kind' | 'modelId'>): ModelKind {
+  if (p.kind) return p.kind;
+  const detected = detectModelKind(p.modelId);
+  return detected === 'other' ? 'chat' : detected;
+}
+
+/** Backwards-compatible helper: true for non-chat models. */
+export function isNonChatModel(id: string): boolean {
+  return detectModelKind(id) !== 'chat';
+}
+
+/** List models available to this profile's key, including names, detected capability, and pricing. */
+export async function listModelOptions(
+  p: Pick<Profile, 'protocol' | 'baseUrl' | 'apiKey' | 'useProxy'>,
+  fetchImpl?: typeof fetch,
+): Promise<ModelOption[]> {
+  const f = fetchImpl ?? (p.useProxy && hasProxy() ? proxyFetch : fetch);
+  const base = trimSlash(p.baseUrl.trim());
+  const endpoint = base.endsWith('/models') ? base : `${base}/models`;
   let res: Response;
   if (p.protocol === 'anthropic') {
-    res = await f(`${base}/models?limit=100`, {
+    res = await f(`${endpoint}?limit=100`, {
       headers: { 'x-api-key': p.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     });
   } else if (p.protocol === 'google') {
-    res = await f(`${base}/models?pageSize=200`, { headers: { 'x-goog-api-key': p.apiKey } });
+    res = await f(`${endpoint}?pageSize=200`, { headers: { 'x-goog-api-key': p.apiKey } });
   } else {
-    res = await f(`${base}/models`, { headers: p.apiKey ? { Authorization: `Bearer ${p.apiKey}` } : {} });
+    res = await f(endpoint, { headers: p.apiKey ? { Authorization: `Bearer ${p.apiKey}` } : {} });
   }
   if (!res.ok) throw new Error(await errorText(res));
   const json = await res.json();
   if (p.protocol === 'google') {
     return (json.models ?? [])
-      .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
-      .map((m: { name: string }) => m.name.replace(/^models\//, ''));
+      .filter((m: { supportedGenerationMethods?: string[] }) =>
+        !m.supportedGenerationMethods ||
+        m.supportedGenerationMethods.some((g) => g === 'generateContent' || g === 'predict' || g === 'predictLongRunning'),
+      )
+      .map((m: { name: string; displayName?: string }): ModelOption => {
+        const id = m.name.replace(/^models\//, '');
+        return { id, name: m.displayName, kind: detectModelKind(id) };
+      })
+      .filter((m: ModelOption) => !!m.id)
+      .sort((a: ModelOption, b: ModelOption) => a.id.localeCompare(b.id));
   }
-  return (json.data ?? json.models ?? []).map((m: { id?: string; name?: string }) => m.id ?? m.name ?? '').filter(Boolean).sort();
+  const perMillion = (v?: string | number) => {
+    if (v === undefined || v === '') return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 1e6 * 10000) / 10000 : undefined;
+  };
+  return (json.data ?? json.models ?? [])
+    .map((m: { id?: string; name?: string; display_name?: string; pricing?: { prompt?: string; completion?: string } }): ModelOption => {
+      const id = m.id ?? m.name ?? '';
+      return {
+        id,
+        name: m.display_name ?? (m.name && m.name !== m.id ? m.name : undefined),
+        inPrice: perMillion(m.pricing?.prompt),
+        outPrice: perMillion(m.pricing?.completion),
+        kind: detectModelKind(id),
+      };
+    })
+    .filter((m: ModelOption) => !!m.id)
+    .sort((a: ModelOption, b: ModelOption) => a.id.localeCompare(b.id));
+}
+
+/** List model IDs available to this profile's key. */
+export async function listModels(p: Pick<Profile, 'protocol' | 'baseUrl' | 'apiKey' | 'useProxy'>): Promise<string[]> {
+  return (await listModelOptions(p)).map((m) => m.id);
 }
 
 async function errorText(res: Response): Promise<string> {

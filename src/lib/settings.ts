@@ -2,6 +2,8 @@ import { useSyncExternalStore } from 'react';
 
 export interface Settings {
   userName: string;
+  /** Local data URL for the user's custom avatar image (empty = initial letter). */
+  userAvatar: string;
   /** Run checkers automatically after every model answer. */
   autoCheck: boolean;
   /** Allow supported models (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen) to search the live web. */
@@ -16,7 +18,7 @@ export interface Settings {
 }
 
 const KEY = 'dissentry.settings';
-const DEFAULTS: Settings = { userName: '', autoCheck: true, webSearch: true, deepThink: false, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
+const DEFAULTS: Settings = { userName: '', userAvatar: '', autoCheck: true, webSearch: true, deepThink: false, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
 const listeners = new Set<() => void>();
 
 let current: Settings = (() => {
@@ -31,7 +33,7 @@ let current: Settings = (() => {
 export const getSettings = () => current;
 export function updateSettings(patch: Partial<Settings>) {
   current = { ...current, ...patch };
-  localStorage.setItem(KEY, JSON.stringify(current));
+  try { localStorage.setItem(KEY, JSON.stringify(current)); } catch { /* ignore storage quota errors */ }
   listeners.forEach((l) => l());
 }
 export function useSettings(): Settings {

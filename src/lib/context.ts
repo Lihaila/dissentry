@@ -30,7 +30,7 @@ export function authorLabel(post: Post, profiles: Map<string, Profile>): string 
 }
 
 function usable(p: Post) {
-  return (p.text.trim().length > 0 || (p.attachments?.length ?? 0) > 0) && p.status !== 'error';
+  return (p.text.trim().length > 0 || (p.attachments?.length ?? 0) > 0 || (p.media?.length ?? 0) > 0) && p.status !== 'error';
 }
 
 function renderAttachmentsText(attachments: Attachment[] | undefined, includeBinary: boolean): string {
@@ -50,24 +50,36 @@ function renderAttachmentsText(attachments: Attachment[] | undefined, includeBin
   return blocks.join('\n\n');
 }
 
-function binaryPartsOf(attachments: Attachment[] | undefined): UserPart[] {
-  if (!attachments?.length) return [];
+function binaryPartsOf(post: Post): UserPart[] {
   const parts: UserPart[] = [];
-  for (const a of attachments) {
+  for (const a of post.attachments ?? []) {
     if (a.kind === 'image' && a.dataUrl) {
       parts.push({ type: 'image', image: a.dataUrl, mediaType: a.mediaType });
     } else if (a.kind === 'file' && a.dataUrl) {
       parts.push({ type: 'file', data: a.dataUrl, mediaType: a.mediaType, filename: a.name });
     }
   }
+  for (const m of post.media ?? []) {
+    if (m.kind === 'image' && m.url) {
+      parts.push({ type: 'image', image: m.url, mediaType: m.mediaType });
+    }
+  }
   return parts;
 }
 
-/** Text of a post including any quoted post, text attachments, and dissent notes, as the model should see it. */
+/** Text of a post including any quoted post, text attachments, generated media notes, and dissent notes. */
 export function renderPost(post: Post, input: ContextInput, includeBinary = true): string {
   let body = clip(post.text);
   const attText = renderAttachmentsText(post.attachments, includeBinary);
   if (attText) body = body ? `${body}\n\n${attText}` : attText;
+  if (post.media?.length) {
+    const mediaLabels = post.media.map((m) =>
+      m.kind === 'image'
+        ? (includeBinary ? `[Generated image: ${m.name ?? 'image'}]` : `[Generated image: ${m.name ?? 'image'} (not shown to text-only model)]`)
+        : `[Generated ${m.kind}: ${m.name ?? m.kind}]`,
+    ).join('\n');
+    body = body ? `${body}\n\n${mediaLabels}` : mediaLabels;
+  }
   if (post.quoteOfId) {
     const q = (input.quotes[post.quoteOfId] ?? []).filter(usable);
     if (q.length) {
@@ -123,9 +135,13 @@ function msgTextLength(m: ChatMessage): number {
   return m.content.reduce((n, p) => n + (p.type === 'text' ? p.text.length : 500), 0);
 }
 
-/** True when any post in `chain` carries a binary image or PDF attachment. */
+/** True when any post in `chain` carries a binary image or PDF attachment or generated image. */
 export function hasBinaryAttachments(chain: Post[]): boolean {
-  return chain.some((p) => p.attachments?.some((a) => (a.kind === 'image' || a.kind === 'file') && !!a.dataUrl));
+  return chain.some(
+    (p) =>
+      p.attachments?.some((a) => (a.kind === 'image' || a.kind === 'file') && !!a.dataUrl) ||
+      p.media?.some((m) => m.kind === 'image' && !!m.url),
+  );
 }
 
 /** Build the message list for `self` to reply to the last post of `chain`. */
@@ -139,7 +155,7 @@ export function buildReplyMessages(
   const raw: ChatMessage[] = [];
   for (const post of input.chain.filter(usable)) {
     const text = renderPost(post, input, includeBinary);
-    const bin = includeBinary ? binaryPartsOf(post.attachments) : [];
+    const bin = includeBinary ? binaryPartsOf(post) : [];
     if (post.kind === 'model' && post.profileId === self.id && bin.length === 0) {
       raw.push({ role: 'assistant', content: text });
     } else {
@@ -211,7 +227,7 @@ export function buildCheckMessages(
   const convo = usablePosts
     .map((p) => `[${authorLabel(p, input.profiles)}]: ${renderPost(p, input, includeBinary)}`)
     .join('\n\n');
-  const bin = includeBinary ? usablePosts.flatMap((p) => binaryPartsOf(p.attachments)) : [];
+  const bin = includeBinary ? usablePosts.flatMap((p) => binaryPartsOf(p)) : [];
   const text = [
     'Conversation so far:',
     convo || '(none)',

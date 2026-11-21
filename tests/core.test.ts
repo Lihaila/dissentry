@@ -178,11 +178,15 @@ describe('usage', () => {
 
 import { generateText } from 'ai';
 import { splitInlineThink } from '../src/lib/engine';
-import { classifyFile, fmtBytes } from '../src/lib/files';
+import { classifyFile, fmtBytes, readAvatarImage } from '../src/lib/files';
+import { generateMedia, pcmToWavDataUrl } from '../src/lib/media';
 import {
+  detectModelKind,
   isMediaUnsupportedError,
+  isNonChatModel,
   isReasoningUnsupportedError,
   isSearchUnsupportedError,
+  listModelOptions,
   modelCall,
   profileWebSearchEnabled,
   supportsWebSearch,
@@ -292,6 +296,169 @@ describe('web search & deepthink provider wiring', () => {
     expect(isMediaUnsupportedError({ statusCode: 400, message: 'This model does not support image_url inputs' })).toBe(true);
     expect(isMediaUnsupportedError({ statusCode: 429, message: 'quota exceeded' })).toBe(false);
   });
+
+  it('parses model lists with names and OpenRouter pricing', async () => {
+    const fakeOrFetch: typeof fetch = async () => new Response(JSON.stringify({
+      data: [
+        { id: 'openai/gpt-6', name: 'OpenAI: GPT-6', pricing: { prompt: '0.000002', completion: '0.000008' } },
+        { id: 'anthropic/claude-sonnet', name: 'Anthropic: Claude Sonnet', pricing: { prompt: '0.000003', completion: '0.000015' } },
+      ],
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+    const list = await listModelOptions(
+      { protocol: 'openai', baseUrl: 'https://openrouter.ai/api/v1/', apiKey: 'k', useProxy: false },
+      fakeOrFetch,
+    );
+    expect(list).toEqual([
+      { id: 'anthropic/claude-sonnet', name: 'Anthropic: Claude Sonnet', inPrice: 3, outPrice: 15, kind: 'chat' },
+      { id: 'openai/gpt-6', name: 'OpenAI: GPT-6', inPrice: 2, outPrice: 8, kind: 'chat' },
+    ]);
+  });
+
+  it('classifies models into chat, image, audio, video, and other', () => {
+    expect(detectModelKind('qwen-image-plus')).toBe('image');
+    expect(detectModelKind('qwen-image-edit')).toBe('image');
+    expect(detectModelKind('wanx2.1-t2i-turbo')).toBe('image');
+    expect(detectModelKind('dall-e-3')).toBe('image');
+    expect(detectModelKind('gpt-image-1')).toBe('image');
+    expect(detectModelKind('imagen-4.0-generate-001')).toBe('image');
+    expect(detectModelKind('qwen3-tts-flash')).toBe('audio');
+    expect(detectModelKind('tts-1-hd')).toBe('audio');
+    expect(detectModelKind('gemini-2.5-flash-preview-tts')).toBe('audio');
+    expect(detectModelKind('wan2.6-t2v')).toBe('video');
+    expect(detectModelKind('wan2.7-t2v')).toBe('video');
+    expect(detectModelKind('wan2.7-videoedit')).toBe('video');
+    expect(detectModelKind('wan2.7-image')).toBe('image');
+    expect(detectModelKind('wan2.7-image-pro')).toBe('image');
+    expect(detectModelKind('sora-2')).toBe('video');
+    expect(detectModelKind('veo-3.0-generate-001')).toBe('video');
+    expect(detectModelKind('text-embedding-v3')).toBe('other');
+    expect(detectModelKind('whisper-1')).toBe('other');
+
+    expect(isNonChatModel('qwen-image-plus')).toBe(true);
+    expect(detectModelKind('qwen-plus')).toBe('chat');
+    expect(detectModelKind('qwen-vl-max')).toBe('chat');
+    expect(detectModelKind('qwen3-vl-plus')).toBe('chat');
+    expect(detectModelKind('qwen3.5-plus')).toBe('chat');
+    expect(detectModelKind('claude-sonnet-5-5')).toBe('chat');
+    expect(detectModelKind('gpt-4o')).toBe('chat');
+    expect(detectModelKind('gemini-3.5-flash')).toBe('chat');
+  });
+
+  it('generates images, audio, and video across Qwen DashScope, OpenAI, Google, and OpenRouter', async () => {
+    const qwenProf = mk('openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-image-plus', { kind: 'image' });
+    let capturedUrl = '';
+    let capturedBody: Record<string, unknown> = {};
+    const qwenImgFetch: typeof fetch = async (u, init) => {
+      const url = String(u);
+      if (url.includes('multimodal-generation')) {
+        capturedUrl = url;
+        capturedBody = JSON.parse(String(init?.body ?? '{}'));
+        return new Response(JSON.stringify({
+          output: { choices: [{ message: { content: [{ image: 'https://oss.example/img.png' }] } }] },
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return new Response(new Uint8Array([137, 80, 78, 71]), { status: 200, headers: { 'content-type': 'image/png' } });
+    };
+    const qImg = await generateMedia({ profile: qwenProf, kind: 'image', prompt: 'a red panda', fetchImpl: qwenImgFetch });
+    expect(capturedUrl).toBe('https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation');
+    expect(capturedBody.model).toBe('qwen-image-plus');
+    expect(qImg.media[0].kind).toBe('image');
+    expect(qImg.media[0].url).toMatch(/^data:image\/png;base64,/);
+
+    const wanImgProf = mk('openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'wan2.7-image-pro', { kind: 'image' });
+    let wanImgUrl = '';
+    const wanImg = await generateMedia({
+      profile: wanImgProf,
+      kind: 'image',
+      prompt: 'mountain lake',
+      fetchImpl: async (u) => {
+        const url = String(u);
+        if (url.includes('multimodal-generation')) {
+          wanImgUrl = url;
+          return new Response(JSON.stringify({ output: { choices: [{ message: { content: [{ image: 'data:image/png;base64,CCCC' }] } }] } }), {
+            status: 200, headers: { 'content-type': 'application/json' },
+          });
+        }
+        return new Response('', { status: 404 });
+      },
+    });
+    expect(wanImgUrl).toBe('https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation');
+    expect(wanImg.media[0].url).toBe('data:image/png;base64,CCCC');
+
+    const qwenTtsProf = mk('openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen3-tts-flash', { kind: 'audio' });
+    const qwenTtsFetch: typeof fetch = async (u) => {
+      if (String(u).includes('multimodal-generation')) {
+        return new Response(JSON.stringify({ output: { audio: { url: 'https://oss.example/a.wav' } } }), {
+          status: 200, headers: { 'content-type': 'application/json' },
+        });
+      }
+      return new Response(new Uint8Array([82, 73, 70, 70]), { status: 200, headers: { 'content-type': 'audio/wav' } });
+    };
+    const qAudio = await generateMedia({ profile: qwenTtsProf, kind: 'audio', prompt: 'hello', fetchImpl: qwenTtsFetch });
+    expect(qAudio.media[0].kind).toBe('audio');
+    expect(qAudio.media[0].url).toMatch(/^data:audio\/wav;base64,/);
+
+    const oaImgProf = mk('openai', 'https://api.openai.com/v1', 'gpt-image-1', { kind: 'image' });
+    const oaImg = await generateMedia({
+      profile: oaImgProf,
+      kind: 'image',
+      prompt: 'sunset',
+      fetchImpl: async () => new Response(JSON.stringify({ data: [{ b64_json: 'AAAA', revised_prompt: 'vivid sunset' }] }), {
+        status: 200, headers: { 'content-type': 'application/json' },
+      }),
+    });
+    expect(oaImg.media[0].url).toBe('data:image/png;base64,AAAA');
+    expect(oaImg.text).toBe('vivid sunset');
+
+    const oaTtsProf = mk('openai', 'https://api.openai.com/v1', 'tts-1', { kind: 'audio' });
+    const oaAudio = await generateMedia({
+      profile: oaTtsProf,
+      kind: 'audio',
+      prompt: 'say hi',
+      fetchImpl: async () => new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'content-type': 'audio/mpeg' } }),
+    });
+    expect(oaAudio.media[0].url).toMatch(/^data:audio\/mpeg;base64,/);
+
+    const gTtsProf = mk('google', 'https://generativelanguage.googleapis.com/v1beta', 'gemini-2.5-flash-preview-tts', { kind: 'audio' });
+    const gAudio = await generateMedia({
+      profile: gTtsProf,
+      kind: 'audio',
+      prompt: 'test',
+      fetchImpl: async () => new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;rate=24000', data: 'AAAAAA==' } }] } }],
+      }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    });
+    expect(gAudio.media[0].mediaType).toBe('audio/wav');
+    expect(gAudio.media[0].url.startsWith('data:audio/wav;base64,UklGR')).toBe(true); // RIFF header
+    expect(pcmToWavDataUrl('AAAAAA==', 24000).startsWith('data:audio/wav;base64,UklGR')).toBe(true);
+
+    const orImgProf = mk('openai', 'https://openrouter.ai/api/v1', 'google/gemini-2.5-flash-image-preview', { kind: 'image' });
+    const orImg = await generateMedia({
+      profile: orImgProf,
+      kind: 'image',
+      prompt: 'cat',
+      fetchImpl: async () => new Response(JSON.stringify({
+        choices: [{ message: { content: 'Here is a cat', images: [{ image_url: { url: 'data:image/png;base64,BBBB' } }] } }],
+      }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    });
+    expect(orImg.media[0].url).toBe('data:image/png;base64,BBBB');
+    expect(orImg.text).toBe('Here is a cat');
+
+    const oaVidProf = mk('openai', 'https://api.openai.com/v1', 'sora-2', { kind: 'video' });
+    const oaVid = await generateMedia({
+      profile: oaVidProf,
+      kind: 'video',
+      prompt: 'ocean waves',
+      fetchImpl: async (u) => {
+        if (String(u).endsWith('/videos')) {
+          return new Response(JSON.stringify({ id: 'vid_1', status: 'completed' }), { status: 200, headers: { 'content-type': 'application/json' } });
+        }
+        return new Response(new Uint8Array([0, 0, 0, 24]), { status: 200, headers: { 'content-type': 'video/mp4' } });
+      },
+    });
+    expect(oaVid.media[0].kind).toBe('video');
+    expect(oaVid.media[0].blob).toBeInstanceOf(Blob);
+  });
 });
 
 describe('inline think extraction, files & multimodal context', () => {
@@ -309,6 +476,13 @@ describe('inline think extraction, files & multimodal context', () => {
     expect(fmtBytes(512)).toBe('512 B');
     expect(fmtBytes(2048)).toBe('2.0 KB');
     expect(fmtBytes(3 * 1024 * 1024)).toBe('3.0 MB');
+  });
+
+  it('validates user avatar uploads (rejects non-images and oversized files)', async () => {
+    const bad = new File(['hello'], 'note.txt', { type: 'text/plain' });
+    await expect(readAvatarImage(bad)).rejects.toThrow('unsupported');
+    const huge = { name: 'big.png', type: 'image/png', size: 20 * 1024 * 1024 } as File;
+    await expect(readAvatarImage(huge)).rejects.toThrow('tooBig');
   });
 
   it('builds multimodal reply & check messages with attachments and non-dismissed dissent notes', () => {

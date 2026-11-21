@@ -1,7 +1,19 @@
 export type Protocol = 'openai' | 'anthropic' | 'google';
+export type ModelKind = 'chat' | 'image' | 'audio' | 'video';
 
 export interface Usage { input: number; output: number }
 export interface Source { url: string; title?: string }
+
+export interface GeneratedMedia {
+  id: string;
+  kind: 'image' | 'audio' | 'video';
+  mediaType: string;
+  /** Data URL (images/audio) or remote URL fallback when CORS prevents local caching. */
+  url: string;
+  /** Locally cached binary Blob (used for generated videos so IndexedDB avoids base64 bloat). */
+  blob?: Blob;
+  name?: string;
+}
 
 export interface Attachment {
   id: string;
@@ -25,6 +37,8 @@ export interface Profile {
   color: string;
   presetId: string;
   protocol: Protocol;
+  /** Capability mode of this model profile (defaults to 'chat'). */
+  kind?: ModelKind;
   baseUrl: string;
   modelId: string;
   apiKey: string;
@@ -66,6 +80,10 @@ export interface Post {
   reasoning?: string;
   /** User-attached images, PDFs, or text/code files. */
   attachments?: Attachment[];
+  /** Generated images, audio clips, or videos returned by media models. */
+  media?: GeneratedMedia[];
+  /** Live progress status while generating async media (e.g. video tasks). */
+  mediaStatus?: string;
   /** Web sources cited by provider-native web search. */
   sources?: Source[];
   usage?: Usage;

@@ -105,6 +105,40 @@ async function compressImage(file: File): Promise<{ dataUrl: string; mediaType: 
   }
 }
 
+export const AVATAR_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,image/avif';
+const AVATAR_DIM = 256;
+const MAX_AVATAR_DATA_CHARS = 180_000;
+
+/** Center-crop and resize a user-selected avatar image on-device into a compact data URL for local storage. */
+export async function readAvatarImage(file: File): Promise<string> {
+  const mime = (file.type || '').toLowerCase();
+  if (!mime.startsWith('image/')) throw new Error('unsupported');
+  if (file.size > MAX_IMAGE_BYTES) throw new Error('tooBig');
+  const rawUrl = await readDataUrl(file);
+  if (typeof document === 'undefined' || typeof Image === 'undefined') return rawUrl;
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('unsupported'));
+    el.src = rawUrl;
+  });
+  const side = Math.min(img.naturalWidth, img.naturalHeight);
+  const sx = Math.floor((img.naturalWidth - side) / 2);
+  const sy = Math.floor((img.naturalHeight - side) / 2);
+  const dim = Math.min(AVATAR_DIM, Math.max(1, side));
+  const canvas = document.createElement('canvas');
+  canvas.width = dim;
+  canvas.height = dim;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return rawUrl;
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, dim, dim);
+  if (mime === 'image/png' || mime === 'image/webp') {
+    const png = canvas.toDataURL('image/png');
+    if (png.length <= MAX_AVATAR_DATA_CHARS) return png;
+  }
+  return canvas.toDataURL('image/jpeg', 0.86);
+}
+
 export type FileReject =
   | { reason: 'limit'; max: number }
   | { reason: 'tooBig'; name: string; max: string }

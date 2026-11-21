@@ -11,8 +11,10 @@
 
 ## Key Capabilities
 - **Multi-model fact-checking**: `@mention` any model (Claude, GPT, Gemini, DeepSeek, Qwen, Grok, Mistral, Groq, OpenRouter, Ollama, LM Studio, or any OpenAI-compatible API). Checker models review the answer and stay silent unless they find a genuine error.
+- **Shared thread memory, Web Search & DeepThink**: Models in a thread share full conversation context (including sibling replies, dissent notes, and attachments), with per-model and per-message toggles for native Web Search and DeepThink extended reasoning.
+- **Files, vision & Image/Audio/Video generation**: Attach images, PDFs, or text/code files for vision chat models, or `@mention` image (`qwen-image`, `wan2.7-image`, `gpt-image-1`, `imagen`), audio TTS (`qwen3-tts-flash`, `tts-1`, `gemini-tts`), and video (`wan2.7-t2v`, `sora-2`, `veo`) models directly in threads.
 - **Consensus notes & underlined claims**: Disputed claims are underlined in the answer, and overlapping notes from multiple checkers merge into one consensus note.
-- **Local-first privacy**: API keys, prompts, answers, and notes are stored only in your browser (IndexedDB). Requests go straight from your browser (or your own local `npx dissentry` proxy) to the AI providers you pick.
+- **Local-first privacy**: API keys, prompts, answers, notes, attachments, generated media, and custom profile avatars are stored only in your browser (IndexedDB / localStorage). Requests go straight from your browser (or your own local `npx dissentry` proxy) to the AI providers you pick.
 - **Personal trust scores & token usage**: Rate notes as right or not helpful to build personal accuracy stats per model, and inspect answering vs. checking token costs.
 - **One-click image sharing**: Export any answer and its dissent notes as a 2400px card for X or team sharing.
 - **Four languages**: English, 简体中文, 日本語, 한국어.

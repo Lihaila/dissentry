@@ -49,7 +49,7 @@ export function ShareDialog({ post, profiles, onClose }: { post: Post; profiles:
       }
     }, 250);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [data, withQuestion, t]);
+  }, [data, withQuestion, t, settings.userName, settings.userAvatar]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
