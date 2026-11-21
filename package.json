@@ -34,6 +34,7 @@
     "@ai-sdk/anthropic": "^4.0.107",
     "@ai-sdk/google": "^4.0.124",
     "@ai-sdk/openai-compatible": "^3.0.94",
+    "@lobehub/icons-static-svg": "^1.104.0",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",

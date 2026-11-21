@@ -45,17 +45,17 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
   return (
     <article
       onClick={(e) => { if (!(e.target as HTMLElement).closest('a,button,pre,input,textarea') && !window.getSelection()?.toString()) open(); }}
-      className={`relative flex gap-3 px-4 pt-3 ${lineBelow ? 'pb-1' : 'border-b border-slate-200 pb-2 dark:border-slate-800'} ${focused ? '' : 'cursor-pointer hover:bg-slate-50/70 dark:hover:bg-white/[0.02]'}`}
+      className={`relative flex gap-3 px-4 pt-3 ${lineBelow ? 'pb-1' : 'border-b border-slate-200 pb-2'} ${focused ? '' : 'cursor-pointer hover:bg-slate-50/70'}`}
     >
       <div className="flex flex-col items-center">
         <Avatar profile={profile} user={post.kind === 'user' ? settings.userName : undefined} />
-        {lineBelow && <div className="mt-1 w-0.5 flex-1 bg-slate-200 dark:bg-slate-800" />}
+        {lineBelow && <div className="mt-1 w-0.5 flex-1 bg-slate-200" />}
       </div>
       <div className="min-w-0 flex-1 pb-1">
         <div className="flex items-baseline gap-1.5 text-[15px]">
           <span className="truncate font-bold">{name}</span>
           <span className="truncate text-slate-500">@{handle}</span>
-          {profile && <span className="hidden truncate rounded bg-slate-100 px-1.5 text-[11px] text-slate-500 sm:inline dark:bg-slate-900">{profile.modelId}</span>}
+          {profile && <span className="hidden truncate rounded bg-slate-100 px-1.5 text-[11px] text-slate-500 sm:inline">{profile.modelId}</span>}
           <span className="text-slate-500">·</span>
           <span className="shrink-0 text-slate-500" title={new Date(post.createdAt).toLocaleString()}>{timeAgo(post.createdAt)}</span>
         </div>
@@ -70,7 +70,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
         </div>
 
         {post.status === 'error' && (
-          <div className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2.5 text-[13.5px] text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          <div className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2.5 text-[13.5px] text-red-800">
             {post.error}
             <button onClick={() => void regenerate(post)} className="ml-2 font-semibold underline">Retry</button>
           </div>
@@ -79,7 +79,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
 
         {quoted && (
           <div onClick={(e) => { e.stopPropagation(); navigate(`/post/${quoted.id}`); }}
-            className="mt-2 max-h-56 cursor-pointer overflow-hidden rounded-2xl border border-slate-200 p-3 [mask-image:linear-gradient(to_bottom,black_75%,transparent)] dark:border-slate-800">
+            className="mt-2 max-h-56 cursor-pointer overflow-hidden rounded-2xl border border-slate-200 p-3 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]">
             <QuotedHeader post={quoted} profiles={profiles} userName={settings.userName} />
             <div className="text-[14px]"><Markdown text={quoted.text} /></div>
           </div>
@@ -90,7 +90,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
         {post.kind === 'model' && checks.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-x-3 text-[12.5px] text-slate-500">
             {pending.length > 0 && <span>Checking with {pending.map((c) => `@${profiles.get(c.profileId)?.handle}`).join(' ')}<span className="dots"><span>.</span><span>.</span><span>.</span></span></span>}
-            {passed.length > 0 && <span className="text-emerald-600 dark:text-emerald-500">✓ No dissent from {passed.map((c) => `@${profiles.get(c.profileId)?.handle}`).join(' ')}</span>}
+            {passed.length > 0 && <span className="text-emerald-600">✓ No dissent from {passed.map((c) => `@${profiles.get(c.profileId)?.handle}`).join(' ')}</span>}
             {failed.map((c) => <span key={c.profileId} className="text-red-500" title={c.error}>⚠ @{profiles.get(c.profileId)?.handle} could not check</span>)}
           </div>
         )}
@@ -132,5 +132,5 @@ export function QuotedHeader({ post, profiles, userName }: { post: Post; profile
 
 function highlightMentions(text: string) {
   return text.split(/(@[a-z0-9][a-z0-9_.-]*)/gi).map((part, i) =>
-    part.startsWith('@') ? <span key={i} className="text-sky-600 dark:text-sky-400">{part}</span> : part);
+    part.startsWith('@') ? <span key={i} className="text-sky-600">{part}</span> : part);
 }

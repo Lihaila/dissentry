@@ -40,9 +40,9 @@ export function ThreadPage({ id }: { id: string }) {
       <div ref={focusRef} className="scroll-mt-14">
         <PostCard post={post} profiles={profiles} focused onReply={() => setReplyOpen(true)} />
       </div>
-      {quotes > 0 && <p className="border-b border-slate-200 px-4 py-2 text-[13px] text-slate-500 dark:border-slate-800">Quoted {quotes} time{quotes > 1 ? 's' : ''}</p>}
+      {quotes > 0 && <p className="border-b border-slate-200 px-4 py-2 text-[13px] text-slate-500">Quoted {quotes} time{quotes > 1 ? 's' : ''}</p>}
       {replyOpen || replies.length === 0 ? (
-        <div className="border-b border-slate-200 dark:border-slate-800">
+        <div className="border-b border-slate-200">
           <Composer
             compact
             key={id}
@@ -54,7 +54,7 @@ export function ThreadPage({ id }: { id: string }) {
           />
         </div>
       ) : (
-        <button onClick={() => setReplyOpen(true)} className="w-full border-b border-slate-200 px-4 py-3 text-left text-[15px] text-slate-500 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-950">
+        <button onClick={() => setReplyOpen(true)} className="w-full border-b border-slate-200 px-4 py-3 text-left text-[15px] text-slate-500 hover:bg-slate-50">
           Post your reply…
         </button>
       )}

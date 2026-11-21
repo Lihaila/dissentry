@@ -27,7 +27,7 @@ export function HomePage() {
       <Composer />
       {roots?.length === 0 && profiles.size > 0 && <EmptyState />}
       {roots?.map(({ post, replies }) => (
-        <div key={post.id} className="border-b border-slate-200 dark:border-slate-800">
+        <div key={post.id} className="border-b border-slate-200">
           <PostCard post={post} profiles={profiles} lineBelow={replies.length > 0} />
           {replies.map((r, i) => (
             <PostCard key={r.id} post={r} profiles={profiles} lineBelow={i < replies.length - 1} />
@@ -35,7 +35,7 @@ export function HomePage() {
         </div>
       ))}
       {roots && roots.length >= limit && (
-        <button onClick={() => setLimit((l) => l + PAGE)} className="w-full py-4 text-sky-600 hover:bg-slate-50 dark:hover:bg-slate-950">Show more</button>
+        <button onClick={() => setLimit((l) => l + PAGE)} className="w-full py-4 text-sky-600 hover:bg-slate-50">Show more</button>
       )}
     </>
   );

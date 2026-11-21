@@ -31,14 +31,14 @@ export function ModelsPage() {
     <>
       <PageHeader title="Models" sub="Bring your own keys, cloud or local" />
       {!hasProxy() && (
-        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900">
           Running without the local server, so some providers may be blocked by browser CORS rules. Run <code className="font-semibold">npx dissentry</code> to use every provider.
         </p>
       )}
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <p className="text-[13px] text-slate-500">Turn on <b>Checker</b> for models that should review other models’ answers.</p>
         <button onClick={() => { setEditing(blank('anthropic', (profiles ?? []).map((p) => p.handle))); setIsNew(true); }}
-          className="shrink-0 rounded-full bg-slate-900 px-4 py-1.5 text-sm font-bold text-white dark:bg-white dark:text-black">+ Add model</button>
+          className="shrink-0 rounded-full bg-slate-900 px-4 py-1.5 text-sm font-bold text-white">+ Add model</button>
       </div>
       {profiles?.length === 0 && !editing && (
         <div className="p-6 text-[15px] text-slate-500">
@@ -50,7 +50,7 @@ export function ModelsPage() {
       {profiles?.map((p) => editing?.id === p.id && !isNew ? (
         <Editor key={p.id} value={editing} taken={(profiles ?? []).filter((x) => x.id !== p.id).map((x) => x.handle)} onDone={() => setEditing(null)} />
       ) : (
-        <div key={p.id} className={`flex items-center gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 ${p.enabled ? '' : 'opacity-50'}`}>
+        <div key={p.id} className={`flex items-center gap-3 border-b border-slate-200 px-4 py-3 ${p.enabled ? '' : 'opacity-50'}`}>
           <Avatar profile={p} />
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5"><b className="truncate">{p.name}</b><span className="truncate text-slate-500">@{p.handle}</span></div>
@@ -58,7 +58,7 @@ export function ModelsPage() {
           </div>
           <Toggle label="Checker" on={p.isChecker} onClick={() => toggle(p, 'isChecker')} />
           <Toggle label="On" on={p.enabled} onClick={() => toggle(p, 'enabled')} />
-          <button onClick={() => { setEditing({ ...p }); setIsNew(false); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold dark:border-slate-700">Edit</button>
+          <button onClick={() => { setEditing({ ...p }); setIsNew(false); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold">Edit</button>
         </div>
       ))}
     </>
@@ -67,7 +67,7 @@ export function ModelsPage() {
 
 function Toggle({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`hidden rounded-full px-2.5 py-1 text-[12px] font-semibold sm:block ${on ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-900'}`}>
+    <button onClick={onClick} className={`hidden rounded-full px-2.5 py-1 text-[12px] font-semibold sm:block ${on ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}`}>
       {on ? '✓ ' : ''}{label}
     </button>
   );
@@ -125,13 +125,16 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
     onDone();
   }
 
-  const input = 'w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-[15px] outline-none focus:border-sky-500 dark:border-slate-700';
+  const input = 'w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-[15px] outline-none focus:border-sky-500';
   return (
-    <div className="space-y-3 border-b border-slate-200 bg-slate-50/60 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/50">
+    <div className="space-y-3 border-b border-slate-200 bg-slate-50/60 px-4 py-4">
       <Field label="Provider">
+        <div className="flex items-center gap-3">
+        <Avatar profile={p} size={38} />
         <select value={p.presetId} onChange={(e) => choosePreset(e.target.value)} className={input}>
           {PRESETS.map((pr) => <option key={pr.id} value={pr.id}>{pr.label}</option>)}
         </select>
+        </div>
         {preset.note && <p className="mt-1 text-[12px] text-slate-500">{preset.note}</p>}
       </Field>
       <div className="grid grid-cols-2 gap-3">
@@ -150,7 +153,7 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
         <div className="flex gap-2">
           <input className={input} list={`models-${p.id}`} value={p.modelId} placeholder={preset.modelHint} onChange={(e) => set({ modelId: e.target.value.trim() })} />
           <datalist id={`models-${p.id}`}>{models.map((m) => <option key={m} value={m} />)}</datalist>
-          <button onClick={() => void fetchModels()} className="shrink-0 rounded-lg border border-slate-300 px-3 text-sm font-semibold dark:border-slate-700">Fetch models</button>
+          <button onClick={() => void fetchModels()} className="shrink-0 rounded-lg border border-slate-300 px-3 text-sm font-semibold">Fetch models</button>
         </div>
       </Field>
       <Field label="Extra instructions (optional)">
@@ -166,11 +169,11 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
         )}
       </div>
       {status && (
-        <p className={`rounded-lg px-3 py-2 text-[13px] ${status.kind === 'ok' ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : status.kind === 'err' ? 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-900'}`}>{status.text}</p>
+        <p className={`rounded-lg px-3 py-2 text-[13px] ${status.kind === 'ok' ? 'bg-emerald-50 text-emerald-800' : status.kind === 'err' ? 'bg-red-50 text-red-800' : 'bg-slate-100 text-slate-600'}`}>{status.text}</p>
       )}
       <div className="flex gap-2">
         <button disabled={!valid} onClick={() => void save()} className="rounded-full bg-sky-500 px-4 py-1.5 text-sm font-bold text-white disabled:opacity-50">Save</button>
-        <button disabled={!p.modelId} onClick={() => void test()} className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-semibold disabled:opacity-50 dark:border-slate-700">Test connection</button>
+        <button disabled={!p.modelId} onClick={() => void test()} className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-semibold disabled:opacity-50">Test connection</button>
         <button onClick={onDone} className="rounded-full px-4 py-1.5 text-sm font-semibold text-slate-500">Cancel</button>
         {!isNew && <button onClick={() => void remove()} className="ml-auto rounded-full px-3 py-1.5 text-sm font-semibold text-red-500">Remove</button>}
       </div>
@@ -179,5 +182,5 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1 block text-[13px] font-semibold text-slate-600 dark:text-slate-400">{label}</span>{children}</label>;
+  return <label className="block"><span className="mb-1 block text-[13px] font-semibold text-slate-600">{label}</span>{children}</label>;
 }

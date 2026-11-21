@@ -1,15 +1,13 @@
 @import "tailwindcss";
-@import "highlight.js/styles/github-dark.css";
-
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@import "highlight.js/styles/github.css";
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans", "Noto Sans CJK SC", sans-serif;
   --color-note: #f59e0b;
 }
 
-html { color-scheme: light dark; }
-body { @apply bg-white text-slate-900 dark:bg-black dark:text-slate-100 antialiased; }
+html { color-scheme: light; }
+body { @apply bg-white text-slate-900 antialiased; }
 
 /* Compact prose for posts */
 .md { @apply text-[15px] leading-relaxed break-words; }
@@ -18,14 +16,14 @@ body { @apply bg-white text-slate-900 dark:bg-black dark:text-slate-100 antialia
 .md h1 { @apply text-lg; } .md h2 { @apply text-base; } .md h3 { @apply text-[15px]; }
 .md ul { @apply list-disc pl-5 space-y-1; }
 .md ol { @apply list-decimal pl-5 space-y-1; }
-.md a { @apply text-sky-600 dark:text-sky-400 underline-offset-2 hover:underline; }
-.md blockquote { @apply border-l-2 border-slate-300 dark:border-slate-700 pl-3 text-slate-600 dark:text-slate-400; }
-.md :not(pre) > code { @apply rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 text-[0.85em]; }
-.md pre { @apply rounded-xl bg-[#0d1117] text-slate-100 text-[13px] overflow-x-auto; }
+.md a { @apply text-sky-600 underline-offset-2 hover:underline; }
+.md blockquote { @apply border-l-2 border-slate-300 pl-3 text-slate-600; }
+.md :not(pre) > code { @apply rounded bg-slate-100 px-1 py-0.5 text-[0.85em]; }
+.md pre { @apply rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-[13px] overflow-x-auto; }
 .md pre code { @apply block p-3; }
 .md table { @apply w-full text-sm border-collapse; }
-.md th, .md td { @apply border border-slate-200 dark:border-slate-800 px-2 py-1 text-left; }
-.md hr { @apply border-slate-200 dark:border-slate-800; }
+.md th, .md td { @apply border border-slate-200 px-2 py-1 text-left; }
+.md hr { @apply border-slate-200; }
 
 .caret::after { content: "▍"; @apply ml-0.5 animate-pulse text-slate-400; }
 

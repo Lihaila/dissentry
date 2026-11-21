@@ -19,7 +19,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <Link href="/" className="mb-4 flex items-center gap-2 px-3 py-2"><Logo /></Link>
         {NAV.map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href}
-            className={`flex items-center gap-4 rounded-full px-3 py-2.5 text-[17px] hover:bg-slate-100 dark:hover:bg-slate-900 ${active(href) ? 'font-bold' : ''}`}>
+            className={`flex items-center gap-4 rounded-full px-3 py-2.5 text-[17px] hover:bg-slate-100 ${active(href) ? 'font-bold' : ''}`}>
             <Icon size={22} strokeWidth={active(href) ? 2.6 : 1.8} />{label}
           </Link>
         ))}
@@ -28,10 +28,10 @@ export function Layout({ children }: { children: ReactNode }) {
           <a className="mt-2 flex items-center gap-1 hover:underline" href="https://github.com/Lihaila/dissentry" target="_blank" rel="noreferrer"><Code2 size={13} /> Open source (MIT)</a>
         </div>
       </aside>
-      <main className="min-h-screen w-full max-w-[640px] border-slate-200 pb-20 sm:border-x dark:border-slate-800">
+      <main className="min-h-screen w-full max-w-[640px] border-slate-200 pb-20 sm:border-x">
         {children}
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-slate-200 bg-white/90 py-2 backdrop-blur sm:hidden dark:border-slate-800 dark:bg-black/90">
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-slate-200 bg-white/90 py-2 backdrop-blur sm:hidden">
         {NAV.map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href} aria-label={label} className="p-2"><Icon size={24} strokeWidth={active(href) ? 2.6 : 1.8} /></Link>
         ))}
@@ -42,9 +42,9 @@ export function Layout({ children }: { children: ReactNode }) {
 
 export function PageHeader({ title, sub, back }: { title: string; sub?: string; back?: boolean }) {
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-6 border-b border-slate-200 bg-white/85 px-4 py-2.5 backdrop-blur dark:border-slate-800 dark:bg-black/85">
+    <header className="sticky top-0 z-10 flex items-center gap-6 border-b border-slate-200 bg-white/85 px-4 py-2.5 backdrop-blur">
       {back && (
-        <button onClick={() => history.length > 1 ? history.back() : (location.href = '/')} aria-label="Back" className="-ml-2 rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-900">←</button>
+        <button onClick={() => history.length > 1 ? history.back() : (location.href = '/')} aria-label="Back" className="-ml-2 rounded-full p-2 hover:bg-slate-100">←</button>
       )}
       <div>
         <h1 className="text-xl font-bold leading-tight">{title}</h1>

@@ -27,15 +27,15 @@ export function SettingsPage() {
     }
   }
 
-  const row = 'border-b border-slate-200 px-4 py-4 dark:border-slate-800';
-  const btn = 'rounded-full border border-slate-300 px-4 py-1.5 text-sm font-semibold dark:border-slate-700';
+  const row = 'border-b border-slate-200 px-4 py-4';
+  const btn = 'rounded-full border border-slate-300 px-4 py-1.5 text-sm font-semibold';
   return (
     <>
       <PageHeader title="Settings" />
       <div className={row}>
-        <label className="block text-[13px] font-semibold text-slate-600 dark:text-slate-400">Your display name</label>
+        <label className="block text-[13px] font-semibold text-slate-600">Your display name</label>
         <input value={s.userName} onChange={(e) => updateSettings({ userName: e.target.value })}
-          className="mt-1 w-64 rounded-lg border border-slate-300 bg-transparent px-3 py-2 outline-none focus:border-sky-500 dark:border-slate-700" />
+          className="mt-1 w-64 rounded-lg border border-slate-300 bg-transparent px-3 py-2 outline-none focus:border-sky-500" />
       </div>
       <label className={`${row} flex items-start gap-3`}>
         <input type="checkbox" className="mt-1" checked={s.autoCheck} onChange={(e) => updateSettings({ autoCheck: e.target.checked })} />
@@ -56,7 +56,7 @@ export function SettingsPage() {
           <button className={btn} onClick={() => void doExport(true)}>Export with API keys</button>
           <button className={btn} onClick={() => file.current?.click()}>Import…</button>
           <input ref={file} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && void doImport(e.target.files[0])} />
-          <button className={`${btn} border-red-300 text-red-600 dark:border-red-900`} onClick={() => {
+          <button className={`${btn} border-red-300 text-red-600`} onClick={() => {
             if (window.confirm('Delete all posts, notes and models from this browser? This cannot be undone.')) void clearAll().then(() => setMsg('All data cleared.'));
           }}>Clear all data</button>
         </div>

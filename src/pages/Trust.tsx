@@ -14,14 +14,14 @@ export function TrustPage() {
     <>
       <PageHeader title="Trust" sub="Who gets corrected, and whose notes hold up, on your questions" />
       {totals && totals.checked > 0 && (
-        <div className="border-b border-slate-200 px-4 py-4 dark:border-slate-800">
+        <div className="border-b border-slate-200 px-4 py-4">
           <p className="text-3xl font-extrabold">{totals.corrected}</p>
           <p className="text-[14px] text-slate-500">answers you confirmed were wrong, out of {totals.checked} checked. Without a second opinion you might have trusted those.</p>
         </div>
       )}
       {rows?.length === 0 && <p className="p-6 text-slate-500">Add models and ask some questions to build your trust table.</p>}
       {rows?.map((r) => (
-        <div key={r.profile.id} className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <div key={r.profile.id} className="border-b border-slate-200 px-4 py-3">
           <div className="flex items-center gap-3">
             <Avatar profile={r.profile} size={36} />
             <div className="min-w-0">
@@ -46,7 +46,7 @@ export function TrustPage() {
 
 function Stat({ title, big, bigLabel, lines }: { title: string; big: string; bigLabel: string; lines: string[] }) {
   return (
-    <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+    <div className="rounded-xl border border-slate-200 p-3">
       <div className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">{title}</div>
       <div className="mt-1"><span className="text-2xl font-extrabold">{big}</span> <span className="text-slate-500">{bigLabel}</span></div>
       {lines.filter(Boolean).map((l) => <div key={l} className="text-slate-500">{l}</div>)}

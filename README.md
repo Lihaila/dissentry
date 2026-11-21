@@ -93,4 +93,4 @@ Contributions are welcome. Please open an issue first for anything large.
 
 ## License
 
-MIT
+MIT. Provider logos come from [@lobehub/icons](https://github.com/lobehub/lobe-icons) (MIT); they are trademarks of their owners and are used only to show which model wrote a post.
