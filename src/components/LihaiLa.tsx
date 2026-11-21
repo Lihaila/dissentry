@@ -155,8 +155,8 @@ export function LihaiLaFooter() {
             <div className="space-y-2">
               <a href={lihailaUrl(lang, 'about')} className={linkCls}>{t('footer.about')}</a>
               <a href={lihailaUrl(lang, 'changelog')} className={linkCls}>{t('footer.changelog')}</a>
-              <a href={lihailaUrl(lang, 'privacy')} className={linkCls}>{t('footer.privacy')}</a>
-              <a href={lihailaUrl(lang, 'terms')} className={linkCls}>{t('footer.terms')}</a>
+              <Link href="/privacy" className={linkCls}>{t('footer.privacy')}</Link>
+              <Link href="/terms" className={linkCls}>{t('footer.terms')}</Link>
               <a href={lihailaUrl(lang, 'delete-account')} className={linkCls}>{t('footer.deleteAccount')}</a>
               <div className="pt-2">
                 <a href="https://github.com/Lihaila/dissentry" target="_blank" rel="noopener noreferrer" className={linkCls}>GitHub (MIT)</a>

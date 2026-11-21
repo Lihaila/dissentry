@@ -84,9 +84,9 @@ export function Layout({ children }: { children: ReactNode }) {
             <span aria-hidden className="text-slate-300">·</span>
             <Link href="/welcome" className="transition hover:text-slate-700">{t('layout.about')}</Link>
             <span aria-hidden className="text-slate-300">·</span>
-            <a href={lihailaUrl(lang, 'privacy')} className="transition hover:text-slate-700">{t('footer.privacy')}</a>
+            <Link href="/privacy" className="transition hover:text-slate-700">{t('footer.privacy')}</Link>
             <span aria-hidden className="text-slate-300">·</span>
-            <a href={lihailaUrl(lang, 'terms')} className="transition hover:text-slate-700">{t('footer.terms')}</a>
+            <Link href="/terms" className="transition hover:text-slate-700">{t('footer.terms')}</Link>
             <span aria-hidden className="text-slate-300">·</span>
             <a className="inline-flex items-center gap-1 transition hover:text-slate-700" href="https://github.com/Lihaila/dissentry" target="_blank" rel="noopener noreferrer">
               <Code2 size={12} /> {t('layout.openSource')}

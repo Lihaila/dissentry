@@ -13,6 +13,7 @@ import { TrustPage } from './pages/Trust';
 import { UsagePage } from './pages/Usage';
 import { SettingsPage } from './pages/Settings';
 import { OpenRouterCallbackPage } from './pages/OpenRouterCallback';
+import { PrivacyPage, TermsPage } from './pages/Legal';
 
 export function App() {
   const t = useT();
@@ -21,12 +22,15 @@ export function App() {
   // First-time visitors (nothing set up yet) see the landing page; returning users go straight to the app.
   const started = useStarted();
   const fresh = useLiveQuery(async () => (await db.profiles.count()) === 0 && (await db.posts.count()) === 0, []);
+  const isPrivacy = loc === '/privacy';
+  const isTerms = loc === '/terms';
   const isLanding = loc === '/welcome' || (loc === '/' && fresh && !started);
 
   useEffect(() => {
     const suffix = 'Dissentry · Lihai La';
-    const title = isLanding
-      ? `Dissentry — ${t('land.h1')} | Lihai La`
+    const title = isPrivacy ? `${t('footer.privacy')} · ${suffix}`
+      : isTerms ? `${t('footer.terms')} · ${suffix}`
+      : isLanding ? `Dissentry — ${t('land.h1')} | Lihai La`
       : loc.startsWith('/models') ? `${t('models.title')} · ${suffix}`
       : loc.startsWith('/trust') ? `${t('trust.title')} · ${suffix}`
       : loc.startsWith('/usage') ? `${t('usage.title')} · ${suffix}`
@@ -34,8 +38,10 @@ export function App() {
       : loc.startsWith('/post/') ? `${t('thread.title')} · ${suffix}`
       : `${t('home.title')} · ${suffix}`;
     document.title = title;
-  }, [loc, lang, isLanding, t]);
+  }, [loc, lang, isLanding, isPrivacy, isTerms, t]);
 
+  if (isPrivacy) return <PrivacyPage />;
+  if (isTerms) return <TermsPage />;
   if (isLanding) return <LandingPage />;
   if (loc === '/' && fresh === undefined) return null; // avoid flashing the app before we know
   return (

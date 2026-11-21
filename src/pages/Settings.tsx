@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
+import { Link } from 'wouter';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/Layout';
+import { lihailaUrl } from '../components/LihaiLa';
 import { ProxySettings } from '../components/ProxySettings';
-import { useT } from '../i18n';
+import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
 import { hasProxy } from '../lib/providers';
 import { updateSettings, useSettings } from '../lib/settings';
@@ -10,6 +12,7 @@ import { clearAll, exportAll, importAll } from '../lib/store';
 
 export function SettingsPage() {
   const t = useT();
+  const lang = useLang();
   const s = useSettings();
   const file = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState('');
@@ -77,6 +80,12 @@ export function SettingsPage() {
           }}>{t('settings.clear')}</button>
         </div>
         {msg && <p className="mt-2 text-[13px]">{msg}</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-5 text-[13px] text-slate-500">
+        <Link href="/privacy" className="font-medium transition hover:text-ink hover:underline">{t('footer.privacy')}</Link>
+        <Link href="/terms" className="font-medium transition hover:text-ink hover:underline">{t('footer.terms')}</Link>
+        <Link href="/welcome" className="transition hover:text-ink hover:underline">{t('layout.about')}</Link>
+        <a href={lihailaUrl(lang)} className="transition hover:text-ink hover:underline">{t('brand.backHome')}</a>
       </div>
     </>
   );

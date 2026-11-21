@@ -3,6 +3,8 @@
 > Community Notes for AI answers. Ask one AI model; your other models fact-check the answer and attach a dissent note only when something is factually wrong, outdated, broken, or unsafe.
 
 - Homepage: https://dissentry.lihaila.com/
+- Privacy Policy: https://dissentry.lihaila.com/privacy
+- Terms of Service: https://dissentry.lihaila.com/terms
 - Publisher: Lihai La LLC (https://lihaila.com/)
 - Source code (MIT): https://github.com/Lihaila/dissentry
 - npm package: https://www.npmjs.com/package/dissentry (`npx dissentry`)
