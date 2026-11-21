@@ -111,7 +111,7 @@ export async function addOpenRouterProfiles(key: string, picks: { handle: string
     return {
       id: uid(), handle, name: p.label, color: '#6467f2', presetId: 'openrouter', protocol: 'openai',
       baseUrl: OR_BASE, modelId: p.modelId, apiKey: key, useProxy: true, systemPrompt: '',
-      enabled: true, isChecker: true, inPrice: p.inPrice, outPrice: p.outPrice, createdAt: now + i,
+      enabled: true, isChecker: true, webSearch: true, deepThink: false, inPrice: p.inPrice, outPrice: p.outPrice, createdAt: now + i,
     };
   });
   await db.profiles.bulkAdd(profiles);

@@ -49,7 +49,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardData>(function Shar
           <div style={{ display: 'flex', gap: 20, marginBottom: 32, paddingBottom: 32, borderBottom: '1px solid #f1f5f9' }}>
             <Avatar user={userName} size={56} />
             <p style={{ fontSize: 30, lineHeight: 1.45, color: '#0f172a', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {clipMarkdown(question.text, 400)}
+              {clipMarkdown(question.text || question.attachments?.map((a) => `📎 ${a.name}`).join(' · ') || '', 400)}
             </p>
           </div>
         )}

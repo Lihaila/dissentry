@@ -38,7 +38,7 @@ export function ThreadPage({ id }: { id: string }) {
 
   return (
     <>
-      <PageHeader title={threadTitle(root.text, 50)} sub={t('thread.title')} back />
+      <PageHeader title={threadTitle(root.text, 50, root.attachments?.[0]?.name)} sub={t('thread.title')} back />
       {ancestors.map((a) => <PostCard key={a.id} post={a} profiles={profiles} lineBelow />)}
       <div ref={focusRef} className="scroll-mt-16">
         <PostCard post={post} profiles={profiles} focused onReply={() => setReplyOpen(true)} />

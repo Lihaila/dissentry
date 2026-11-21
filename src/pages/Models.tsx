@@ -10,7 +10,7 @@ import { db, uid } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
 import { toHandle } from '../lib/mentions';
 import { PRESETS, presetById } from '../lib/presets';
-import { friendlyError, hasProxy, languageModel, listModels } from '../lib/providers';
+import { friendlyError, hasProxy, languageModel, listModels, supportsWebSearch } from '../lib/providers';
 import type { Profile } from '../lib/types';
 
 function blank(presetId = 'anthropic', taken: string[] = []): Profile {
@@ -20,7 +20,7 @@ function blank(presetId = 'anthropic', taken: string[] = []): Profile {
   return {
     id: uid(), handle, name: pr.label.replace(/ \(.*\)$/, ''), color: pr.color, presetId: pr.id,
     protocol: pr.protocol, baseUrl: pr.baseUrl, modelId: '', apiKey: '', useProxy: true,
-    systemPrompt: '', enabled: true, isChecker: false, createdAt: Date.now(),
+    systemPrompt: '', enabled: true, isChecker: false, webSearch: true, deepThink: false, createdAt: Date.now(),
   };
 }
 
@@ -38,7 +38,8 @@ export function ModelsPage() {
     setIsNew(true);
     navigate('/models', { replace: true });
   }, [search, profiles, navigate]);
-  const toggle = (p: Profile, key: 'enabled' | 'isChecker') => db.profiles.update(p.id, { [key]: !p[key] });
+  const toggle = (p: Profile, key: 'enabled' | 'isChecker' | 'deepThink') => db.profiles.update(p.id, { [key]: !p[key] });
+  const toggleWeb = (p: Profile) => db.profiles.update(p.id, { webSearch: p.webSearch === false });
 
   return (
     <>
@@ -58,7 +59,7 @@ export function ModelsPage() {
         <OpenRouterButton />
       </div>
       <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3">
-        <p className="text-[13px] text-slate-500">{t('models.checkerHint')}</p>
+        <p className="text-[13px] text-slate-500">{t('models.optionsHint')}</p>
         <button onClick={() => { setEditing(blank('anthropic', (profiles ?? []).map((p) => p.handle))); setIsNew(true); }}
           className="shrink-0 rounded-full bg-ink px-4 py-2 text-[13.5px] font-semibold text-white hover:bg-slate-800">{t('models.add')}</button>
       </div>
@@ -67,16 +68,22 @@ export function ModelsPage() {
       {profiles?.map((p) => editing?.id === p.id && !isNew ? (
         <Editor key={p.id} value={editing} taken={(profiles ?? []).filter((x) => x.id !== p.id).map((x) => x.handle)} onDone={() => setEditing(null)} />
       ) : (
-        <div key={p.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200/80 px-4 py-3.5 transition hover:bg-slate-50/60 ${p.enabled ? '' : 'opacity-55'}`}>
-          <Avatar profile={p} size={40} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-1.5"><b className="truncate text-ink">{p.name}</b><span className="truncate text-[13.5px] text-slate-500">@{p.handle}</span></div>
-            <div className="truncate text-[12px] text-slate-500">{p.modelId || <i>{t('models.noModel')}</i>} · {presetById(p.presetId).label}</div>
+        <div key={p.id} className={`border-b border-slate-200/80 px-4 py-3.5 transition hover:bg-slate-50/60 ${p.enabled ? '' : 'opacity-55'}`}>
+          <div className="flex items-center gap-3">
+            <Avatar profile={p} size={40} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5"><b className="truncate text-ink">{p.name}</b><span className="truncate text-[13.5px] text-slate-500">@{p.handle}</span></div>
+              <div className="truncate text-[12px] text-slate-500">{p.modelId || <i>{t('models.noModel')}</i>} · {presetById(p.presetId).label}</div>
+            </div>
+            <button onClick={() => { setEditing({ ...p }); setIsNew(false); }} className="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-ink shadow-2xs transition hover:border-slate-300 hover:bg-slate-50">{t('common.edit')}</button>
           </div>
-          <div className="flex items-center gap-1.5 max-sm:w-full max-sm:pl-[52px]">
-            <Switch label={t('common.checker')} on={p.isChecker} onClick={() => toggle(p, 'isChecker')} tone="amber" />
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pl-[52px]">
             <Switch label={t('models.on')} on={p.enabled} onClick={() => toggle(p, 'enabled')} />
-            <button onClick={() => { setEditing({ ...p }); setIsNew(false); }} className="ml-auto rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-ink shadow-2xs transition hover:border-slate-300 hover:bg-slate-50 sm:ml-0">{t('common.edit')}</button>
+            <Switch label={t('common.checker')} on={p.isChecker} onClick={() => toggle(p, 'isChecker')} tone="amber" />
+            {supportsWebSearch(p) && (
+              <Switch label={t('composer.web')} on={p.webSearch !== false} onClick={() => toggleWeb(p)} tone="sky" />
+            )}
+            <Switch label={t('composer.deepThink')} on={!!p.deepThink} onClick={() => toggle(p, 'deepThink')} tone="violet" />
           </div>
         </div>
       ))}
@@ -84,8 +91,12 @@ export function ModelsPage() {
   );
 }
 
-function Switch({ label, on, onClick, tone }: { label: string; on: boolean; onClick: () => void; tone?: 'amber' }) {
-  const active = tone === 'amber' ? 'bg-amber-100/90 text-amber-800 ring-amber-200/90' : 'bg-emerald-50 text-emerald-700 ring-emerald-200/90';
+function Switch({ label, on, onClick, tone }: { label: string; on: boolean; onClick: () => void; tone?: 'amber' | 'sky' | 'violet' }) {
+  const active =
+    tone === 'amber' ? 'bg-amber-100/90 text-amber-800 ring-amber-200/90'
+    : tone === 'sky' ? 'bg-sky-50 text-sky-700 ring-sky-200/90'
+    : tone === 'violet' ? 'bg-violet-50 text-violet-700 ring-violet-200/90'
+    : 'bg-emerald-50 text-emerald-700 ring-emerald-200/90';
   return (
     <button onClick={onClick} aria-pressed={on}
       className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition active:scale-[.97] ${on ? active : 'bg-white text-slate-400 ring-slate-200 hover:text-slate-600'}`}>
@@ -190,8 +201,13 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
       <Field label={t('editor.instructions')}>
         <textarea className={input} rows={2} value={p.systemPrompt} placeholder={t('editor.instructionsPlaceholder')} onChange={(e) => set({ systemPrompt: e.target.value })} />
       </Field>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px]">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 text-[14px]">
+        <label className="flex items-center gap-2"><input type="checkbox" className="accent-emerald-600" checked={p.enabled} onChange={(e) => set({ enabled: e.target.checked })} /> {t('editor.enabled')}</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="accent-amber-500" checked={p.isChecker} onChange={(e) => set({ isChecker: e.target.checked })} /> {t('editor.checker')}</label>
+        {supportsWebSearch(p) && (
+          <label className="flex items-center gap-2"><input type="checkbox" className="accent-sky-600" checked={p.webSearch !== false} onChange={(e) => set({ webSearch: e.target.checked })} /> {t('editor.webSearch')}</label>
+        )}
+        <label className="flex items-center gap-2"><input type="checkbox" className="accent-violet-600" checked={!!p.deepThink} onChange={(e) => set({ deepThink: e.target.checked })} /> {t('editor.deepThink')}</label>
         <label className="flex items-center gap-2"><input type="color" value={p.color} onChange={(e) => set({ color: e.target.value })} className="h-6 w-8 cursor-pointer rounded bg-transparent" /> {t('editor.color')}</label>
         {hasProxy() && (
           <label className="flex items-center gap-2" title={t('editor.routeHint')}>

@@ -143,7 +143,7 @@ function RecentThreads() {
             <div key={r.id} className={`group flex items-center rounded-lg transition ${isActive ? 'bg-slate-200/70 font-medium text-ink' : 'text-slate-600 hover:bg-slate-200/45 hover:text-ink'}`}>
               <Link href={`/post/${r.id}`} className="flex min-w-0 flex-1 items-center gap-2 truncate px-3 py-1.5 text-[13px]">
                 <span className={`h-1.5 w-1.5 shrink-0 rounded-full transition ${isActive ? 'bg-amber-500' : 'bg-slate-300 group-hover:bg-slate-400'}`} />
-                <span className="truncate">{threadTitle(r.text, 48)}</span>
+                <span className="truncate">{threadTitle(r.text, 48, r.attachments?.[0]?.name)}</span>
               </Link>
               <button onClick={() => void remove(r.id)} aria-label={t('post.deleteThreadTitle')} title={t('post.deleteThreadTitle')}
                 className="mr-1 shrink-0 rounded-md p-1 text-slate-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 focus:opacity-100 group-hover:opacity-100">

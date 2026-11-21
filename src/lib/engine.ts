@@ -1,14 +1,14 @@
 import { generateText, streamText } from 'ai';
 import { db, uid } from './db';
-import { buildCheckMessages, buildReplyMessages, checkerSystemPrompt, replySystemPrompt, type ContextInput } from './context';
+import { buildCheckMessages, buildReplyMessages, checkerSystemPrompt, hasBinaryAttachments, replySystemPrompt, type ContextInput } from './context';
 import { t } from '../i18n';
 import { parseMentions } from './mentions';
 import { findMatchingNote, maxSeverity, parseCheckResult } from './notes';
-import { friendlyError, isSearchUnsupportedError, modelCall } from './providers';
+import { friendlyError, isMediaUnsupportedError, isReasoningUnsupportedError, isSearchUnsupportedError, modelCall } from './providers';
 import { getSettings } from './settings';
-import { getAncestors, getQuotes, profileMap } from './store';
+import { getQuotes, getThreadNotes, getThreadPosts, profileMap } from './store';
 import { abortStream, isRunning, trackStream, untrackStream } from './streams';
-import type { Note, Post, Profile, Source, Usage } from './types';
+import type { Attachment, Note, Post, Profile, Source, Usage } from './types';
 
 const toUsage = (u?: { inputTokens?: number; outputTokens?: number }): Usage | undefined =>
   u && (u.inputTokens || u.outputTokens) ? { input: u.inputTokens ?? 0, output: u.outputTokens ?? 0 } : undefined;
@@ -21,22 +21,53 @@ export function stop(postId: string) {
   }
 }
 
-async function contextFor(chain: Post[]): Promise<ContextInput> {
-  return { chain, quotes: await getQuotes(chain), profiles: await profileMap() };
+async function contextFor(chain: Post[], opts: { includeNotes?: boolean } = {}): Promise<ContextInput> {
+  const [quotes, profiles, notes] = await Promise.all([
+    getQuotes(chain),
+    profileMap(),
+    opts.includeNotes === false ? Promise.resolve(undefined) : getThreadNotes(chain),
+  ]);
+  return { chain, quotes, notes, profiles };
 }
 
 async function enabledProfiles(): Promise<Profile[]> {
   return (await db.profiles.toArray()).filter((p) => p.enabled);
 }
 
+/** Lift leading <think>...</think> blocks emitted inline by local/custom models into separate reasoning text. */
+export function splitInlineThink(rawText: string, streamReasoning: string): { text: string; reasoning: string } {
+  const trimmed = rawText.trimStart();
+  if (!trimmed.startsWith('<think>')) return { text: rawText, reasoning: streamReasoning };
+  const afterOpen = trimmed.slice('<think>'.length);
+  const end = afterOpen.indexOf('</think>');
+  if (end === -1) {
+    const combined = streamReasoning ? `${streamReasoning}\n${afterOpen}` : afterOpen;
+    return { text: '', reasoning: combined.trimStart() };
+  }
+  const inline = afterOpen.slice(0, end).trim();
+  const rest = afterOpen.slice(end + '</think>'.length).replace(/^\s+/, '');
+  const combined = streamReasoning && inline ? `${streamReasoning}\n${inline}` : streamReasoning || inline;
+  return { text: rest, reasoning: combined };
+}
+
 /**
  * Create a user post and ask every @mentioned model to reply.
  * Replying to a model's post without any @mention addresses that model, like replying on X.
  */
-export async function submitPost(input: { text: string; parentId?: string; quoteOfId?: string; webSearch?: boolean }): Promise<Post> {
+export async function submitPost(input: {
+  text: string;
+  parentId?: string;
+  quoteOfId?: string;
+  webSearch?: boolean;
+  deepThink?: boolean;
+  attachments?: Attachment[];
+}): Promise<Post> {
   const text = input.text.trim();
+  const attachments = input.attachments?.length ? input.attachments : undefined;
   const parent = input.parentId ? await db.posts.get(input.parentId) : undefined;
-  const webSearch = input.webSearch ?? getSettings().webSearch;
+  const settings = getSettings();
+  const webSearch = input.webSearch ?? settings.webSearch;
+  const deepThink = input.deepThink ?? settings.deepThink;
   const id = uid();
   const post: Post = {
     id, kind: 'user', text,
@@ -45,6 +76,8 @@ export async function submitPost(input: { text: string; parentId?: string; quote
     rootId: parent?.rootId ?? id,
     status: 'done',
     webSearch: webSearch || undefined,
+    deepThink: deepThink || undefined,
+    attachments,
     createdAt: Date.now(),
   };
   await db.posts.add(post);
@@ -57,46 +90,65 @@ export async function submitPost(input: { text: string; parentId?: string; quote
     if (author) targets = [author];
   }
   // Replies stream in the background; the UI updates live from the database.
-  for (const p of targets) void runReply(p, post, { webSearch });
+  for (const p of targets) void runReply(p, post, { webSearch, deepThink });
   return post;
 }
 
-/** Stream a reply from `profile` to `parent`, then run checkers on it. */
-export async function runReply(profile: Profile, parent: Post, opts: { extraUserMessage?: string; respondsToNoteId?: string; webSearch?: boolean } = {}): Promise<Post> {
-  const wantSearch = opts.webSearch ?? parent.webSearch ?? getSettings().webSearch;
-  const initialCall = modelCall(profile, { webSearch: wantSearch });
+/** Stream a reply from `profile` to `parent`, sharing the full thread memory, then run checkers on it. */
+export async function runReply(
+  profile: Profile,
+  parent: Post,
+  opts: { extraUserMessage?: string; respondsToNoteId?: string; webSearch?: boolean; deepThink?: boolean } = {},
+): Promise<Post> {
+  const settings = getSettings();
+  const wantSearch = opts.webSearch ?? parent.webSearch ?? settings.webSearch;
+  const wantThink = (opts.deepThink ?? parent.deepThink ?? settings.deepThink) || !!profile.deepThink;
+  const initialCall = modelCall(profile, { webSearch: wantSearch, deepThink: wantThink });
   const reply: Post = {
     id: uid(), kind: 'model', profileId: profile.id, text: '',
     parentId: parent.id, rootId: parent.rootId,
     status: 'streaming', respondsToNoteId: opts.respondsToNoteId,
     webSearch: initialCall.searchActive || undefined,
+    deepThink: initialCall.thinkActive || undefined,
     createdAt: Date.now(),
   };
   await db.posts.add(reply);
   const ctrl = new AbortController();
   trackStream(reply.id, ctrl);
 
-  let text = '';
+  let rawText = '';
+  let streamReasoning = '';
   let lastWrite = 0;
   let usedSearch = initialCall.searchActive;
+  let usedThink = initialCall.thinkActive;
   const sources: Source[] = [];
   const seenUrls = new Set<string>();
 
-  async function execute(call: ReturnType<typeof modelCall>, ctx: ContextInput) {
+  async function execute(call: ReturnType<typeof modelCall>, ctx: ContextInput, includeBinary: boolean) {
     const result = streamText({
       model: call.model,
       tools: call.tools,
+      reasoning: call.reasoning,
+      providerOptions: call.providerOptions,
       system: replySystemPrompt(profile, [...ctx.profiles.values()].filter((p) => p.enabled)),
-      messages: buildReplyMessages(ctx, profile, opts.extraUserMessage),
+      messages: buildReplyMessages(ctx, profile, opts.extraUserMessage, { includeBinary }),
       abortSignal: ctrl.signal,
       maxRetries: 0, // never silently re-send (and re-bill) a failed call
     });
     for await (const part of result.fullStream) {
       if (part.type === 'text-delta') {
-        text += part.text;
+        rawText += part.text;
         if (Date.now() - lastWrite > 60) {
           lastWrite = Date.now();
-          await db.posts.update(reply.id, { text });
+          const split = splitInlineThink(rawText, streamReasoning);
+          await db.posts.update(reply.id, { text: split.text, reasoning: split.reasoning || undefined });
+        }
+      } else if (part.type === 'reasoning-delta' && part.text) {
+        streamReasoning += part.text;
+        if (Date.now() - lastWrite > 60) {
+          lastWrite = Date.now();
+          const split = splitInlineThink(rawText, streamReasoning);
+          await db.posts.update(reply.id, { text: split.text, reasoning: split.reasoning || undefined });
         }
       } else if (part.type === 'source' && part.sourceType === 'url' && part.url && !seenUrls.has(part.url) && sources.length < 8) {
         seenUrls.add(part.url);
@@ -109,49 +161,77 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
   }
 
   try {
-    const ctx = await contextFor(await getAncestors(parent));
+    const thread = await getThreadPosts(parent, [reply.id]);
+    const ctx = await contextFor(thread);
+    const parentHasBinary = hasBinaryAttachments([parent]);
+    const threadHasBinary = hasBinaryAttachments(thread);
+    let call = initialCall;
+    let includeBinary = true;
     let result: Awaited<ReturnType<typeof execute>>;
-    try {
-      result = await execute(initialCall, ctx);
-    } catch (e) {
-      // If a specific model rejects web-search tools/plugins before streaming text, retry once without search.
-      if (initialCall.searchActive && !ctrl.signal.aborted && !text && isSearchUnsupportedError(e)) {
-        usedSearch = false;
-        await db.posts.update(reply.id, { webSearch: undefined });
-        result = await execute(modelCall(profile, { webSearch: false }), ctx);
-      } else {
+
+    while (true) {
+      try {
+        result = await execute(call, ctx, includeBinary);
+        break;
+      } catch (e) {
+        const cleanStart = !ctrl.signal.aborted && !rawText && !streamReasoning;
+        // Fallback 1: specific model rejects DeepThink / reasoning parameters.
+        if (call.thinkActive && cleanStart && isReasoningUnsupportedError(e)) {
+          usedThink = false;
+          call = modelCall(profile, { webSearch: call.searchActive, deepThink: false });
+          await db.posts.update(reply.id, { deepThink: undefined });
+          continue;
+        }
+        // Fallback 2: specific model rejects web-search tools/plugins.
+        if (call.searchActive && cleanStart && isSearchUnsupportedError(e)) {
+          usedSearch = false;
+          call = modelCall(profile, { webSearch: false, deepThink: call.thinkActive });
+          await db.posts.update(reply.id, { webSearch: undefined });
+          continue;
+        }
+        // Fallback 3: a text-only model sees an older image/PDF from earlier in the shared thread.
+        if (includeBinary && threadHasBinary && !parentHasBinary && cleanStart && isMediaUnsupportedError(e)) {
+          includeBinary = false;
+          continue;
+        }
         throw e;
       }
     }
+
+    const final = splitInlineThink(rawText, streamReasoning);
     // The SDK ends the stream quietly on abort; treat that as stopped, not finished (and don't check it).
     if (ctrl.signal.aborted) {
-      await db.posts.update(reply.id, { text, status: 'stopped' });
-      return (await db.posts.get(reply.id)) ?? { ...reply, text, status: 'stopped' };
+      await db.posts.update(reply.id, { text: final.text, reasoning: final.reasoning || undefined, status: 'stopped' });
+      return (await db.posts.get(reply.id)) ?? { ...reply, text: final.text, reasoning: final.reasoning || undefined, status: 'stopped' };
     }
-    if (!text.trim()) throw new Error(t('err.empty'));
+    if (!final.text.trim()) throw new Error(t('err.empty'));
     const usage = toUsage(await Promise.resolve(result.totalUsage).catch(() => undefined));
     await db.posts.update(reply.id, {
-      text,
+      text: final.text,
+      reasoning: final.reasoning || undefined,
       status: 'done',
       usage,
       webSearch: usedSearch || undefined,
+      deepThink: usedThink || undefined,
       sources: sources.length ? sources : undefined,
     });
   } catch (e) {
     const aborted = ctrl.signal.aborted;
     const error = aborted ? undefined : friendlyError(e, profile);
+    const final = splitInlineThink(rawText, streamReasoning);
     await db.posts.update(reply.id, {
-      text,
+      text: final.text,
+      reasoning: final.reasoning || undefined,
       status: aborted ? 'stopped' : 'error',
       error,
     });
-    return (await db.posts.get(reply.id)) ?? { ...reply, text, status: aborted ? 'stopped' : 'error', error };
+    return (await db.posts.get(reply.id)) ?? { ...reply, text: final.text, reasoning: final.reasoning || undefined, status: aborted ? 'stopped' : 'error', error };
   } finally {
     untrackStream(reply.id);
   }
 
   const done = await db.posts.get(reply.id);
-  if (!done) return { ...reply, text, status: 'done' };
+  if (!done) return { ...reply, text: splitInlineThink(rawText, streamReasoning).text, status: 'done' };
   if (getSettings().autoCheck && !opts.respondsToNoteId) void runChecks(done);
   return done;
 }
@@ -165,7 +245,7 @@ function serialised<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
-/** Ask every enabled checker (other than the author) to review a model answer. */
+/** Ask every enabled checker (other than the author) to review a model answer using the shared thread context. */
 export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
   if (post.kind !== 'model' || post.status !== 'done') return;
   const all = await enabledProfiles();
@@ -174,24 +254,44 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
   const checkers = (only ?? all.filter((p) => p.isChecker)).filter((p) => p.id !== author.id);
   if (!checkers.length) return;
 
-  const chain = await getAncestors(post);
-  const ctx = await contextFor(chain.slice(0, -1));
-  const messages = buildCheckMessages(ctx, post, author);
+  const history = (await getThreadPosts(post)).filter((p) => p.id !== post.id);
+  const ctx = await contextFor(history, { includeNotes: false });
+  const historyHasBinary = hasBinaryAttachments(history);
   const wantSearch = post.webSearch ?? getSettings().webSearch;
   const sys = checkerSystemPrompt();
 
   await Promise.all(checkers.map(async (checker) => {
     await db.checks.put({ postId: post.id, profileId: checker.id, verdict: 'pending', createdAt: Date.now() });
     try {
-      const call = modelCall(checker, { webSearch: wantSearch });
+      let call = modelCall(checker, { webSearch: wantSearch, deepThink: !!checker.deepThink });
+      let includeBinary = true;
       let gen: Awaited<ReturnType<typeof generateText>>;
-      try {
-        gen = await generateText({ model: call.model, tools: call.tools, system: sys, messages, maxRetries: 0 });
-      } catch (e) {
-        if (call.searchActive && isSearchUnsupportedError(e)) {
-          const fallback = modelCall(checker, { webSearch: false });
-          gen = await generateText({ model: fallback.model, system: sys, messages, maxRetries: 0 });
-        } else {
+      while (true) {
+        try {
+          const messages = buildCheckMessages(ctx, post, author, { includeBinary });
+          gen = await generateText({
+            model: call.model,
+            tools: call.tools,
+            reasoning: call.reasoning,
+            providerOptions: call.providerOptions,
+            system: sys,
+            messages,
+            maxRetries: 0,
+          });
+          break;
+        } catch (e) {
+          if (call.thinkActive && isReasoningUnsupportedError(e)) {
+            call = modelCall(checker, { webSearch: call.searchActive, deepThink: false });
+            continue;
+          }
+          if (call.searchActive && isSearchUnsupportedError(e)) {
+            call = modelCall(checker, { webSearch: false, deepThink: call.thinkActive });
+            continue;
+          }
+          if (includeBinary && historyHasBinary && isMediaUnsupportedError(e)) {
+            includeBinary = false;
+            continue;
+          }
           throw e;
         }
       }
@@ -241,7 +341,10 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
 export async function regenerate(post: Post) {
   if (post.kind !== 'model' || !post.parentId) return;
   const [profile, parent] = await Promise.all([db.profiles.get(post.profileId!), db.posts.get(post.parentId)]);
-  if (profile && parent) await runReply(profile, parent, { webSearch: getSettings().webSearch });
+  if (profile && parent) {
+    const s = getSettings();
+    await runReply(profile, parent, { webSearch: s.webSearch, deepThink: s.deepThink });
+  }
 }
 
 /** The note's target model answers the note: concede and correct, or push back. */

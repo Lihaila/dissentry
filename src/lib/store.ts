@@ -1,7 +1,7 @@
 // All persistence goes through here, so a sync backend can replace Dexie later without touching the UI.
 import { db } from './db';
 import { abortAllStreams, abortStream } from './streams';
-import type { Post, Profile } from './types';
+import type { Note, Post, Profile } from './types';
 
 export async function getAncestors(post: Post): Promise<Post[]> {
   const chain: Post[] = [post];
@@ -15,6 +15,41 @@ export async function getAncestors(post: Post): Promise<Post[]> {
     cur = parent;
   }
   return chain;
+}
+
+/**
+ * Shared thread memory: returns every completed post in `upTo`'s thread chronologically up to `upTo`,
+ * so all models in the same thread share one memory (including sibling answers from other models),
+ * while excluding concurrent replies to `upTo` itself and any `excludeIds`.
+ */
+export async function getThreadPosts(upTo: Post, excludeIds: string[] = []): Promise<Post[]> {
+  const excluded = new Set(excludeIds);
+  const ancestors = await getAncestors(upTo);
+  const ancestorIds = new Set(ancestors.map((p) => p.id));
+  const all = await db.posts.where('rootId').equals(upTo.rootId).sortBy('createdAt');
+  const included = all.filter((p) => {
+    if (excluded.has(p.id)) return false;
+    if (p.id === upTo.id) return false;
+    if (ancestorIds.has(p.id)) return true;
+    if (p.parentId === upTo.id) return false;
+    if (p.status === 'streaming' || p.status === 'error') return false;
+    return p.createdAt <= upTo.createdAt;
+  });
+  included.sort((a, b) => a.createdAt - b.createdAt);
+  if (!excluded.has(upTo.id)) included.push(upTo);
+  return included;
+}
+
+/** Active (non-dismissed) dissent notes keyed by postId, so follow-up turns remember corrections. */
+export async function getThreadNotes(posts: Post[]): Promise<Record<string, Note[]>> {
+  if (!posts.length) return {};
+  const notes = await db.notes.where('postId').anyOf(posts.map((p) => p.id)).toArray();
+  const out: Record<string, Note[]> = {};
+  for (const n of notes) {
+    if (n.status === 'dismissed') continue;
+    (out[n.postId] ??= []).push(n);
+  }
+  return out;
 }
 
 /** Quoted-post chains for every quote in `chain` (quoted post and up to 3 posts above it). */

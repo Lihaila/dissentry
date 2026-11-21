@@ -2,10 +2,12 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogle } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import type { LanguageModel, ToolSet } from 'ai';
+import type { LanguageModel, ToolSet, streamText } from 'ai';
 import { t } from '../i18n';
 import { getSettings } from './settings';
 import type { Profile } from './types';
+
+type ProviderOptions = NonNullable<Parameters<typeof streamText>[0]['providerOptions']>;
 
 const TARGET_HEADER = 'x-dissentry-target';
 
@@ -64,16 +66,33 @@ export function supportsWebSearch(p: Pick<Profile, 'protocol' | 'baseUrl'>): boo
   return url.includes('openrouter.ai') || url.includes('api.openai.com') || url.includes('api.x.ai') || url.includes('aliyuncs.com');
 }
 
+/** Whether web search is enabled for a specific model profile. */
+export const profileWebSearchEnabled = (p: Pick<Profile, 'protocol' | 'baseUrl' | 'webSearch'>) =>
+  supportsWebSearch(p) && p.webSearch !== false;
+
+/** Whether this provider can be sent a DeepThink / reasoning parameter. */
+export function supportsDeepThink(_p: Pick<Profile, 'protocol' | 'baseUrl'>): boolean {
+  return true;
+}
+
 export interface ModelCallConfig {
   model: LanguageModel;
   tools?: ToolSet;
+  reasoning?: 'high';
+  providerOptions?: ProviderOptions;
   searchActive: boolean;
+  thinkActive: boolean;
 }
 
-export function modelCall(p: Profile, opts: { webSearch?: boolean; fetchImpl?: typeof fetch } = {}): ModelCallConfig {
+export function modelCall(
+  p: Profile,
+  opts: { webSearch?: boolean; deepThink?: boolean; fetchImpl?: typeof fetch } = {},
+): ModelCallConfig {
   const f = opts.fetchImpl ?? fetchFor(p);
   const baseURL = trimSlash(p.baseUrl);
-  const wantSearch = !!opts.webSearch;
+  const wantSearch = opts.webSearch === false ? false : Boolean(opts.webSearch) && p.webSearch !== false;
+  const wantThink = opts.deepThink === undefined ? !!p.deepThink : Boolean(opts.deepThink);
+
   switch (p.protocol) {
     case 'anthropic': {
       const provider = createAnthropic({
@@ -85,7 +104,9 @@ export function modelCall(p: Profile, opts: { webSearch?: boolean; fetchImpl?: t
       return {
         model: provider(p.modelId),
         tools: wantSearch ? { web_search: provider.tools.webSearch_20250305({ maxUses: 3 }) } : undefined,
+        reasoning: wantThink ? 'high' : undefined,
         searchActive: wantSearch,
+        thinkActive: wantThink,
       };
     }
     case 'google': {
@@ -93,23 +114,35 @@ export function modelCall(p: Profile, opts: { webSearch?: boolean; fetchImpl?: t
       return {
         model: provider(p.modelId),
         tools: wantSearch ? { google_search: provider.tools.googleSearch({}) } : undefined,
+        reasoning: wantThink ? 'high' : undefined,
+        providerOptions: wantThink ? { google: { thinkingConfig: { includeThoughts: true } } } : undefined,
         searchActive: wantSearch,
+        thinkActive: wantThink,
       };
     }
     default: {
       const lower = baseURL.toLowerCase();
-      // OpenAI and xAI serve native web_search through the Responses API (/v1/responses).
-      if (wantSearch && (lower.includes('api.openai.com') || lower.includes('api.x.ai'))) {
+      const isOpenAI = lower.includes('api.openai.com');
+      const isXai = lower.includes('api.x.ai');
+      // OpenAI uses Responses API for native web_search AND reasoning summaries; xAI uses it for native web_search.
+      if ((isOpenAI && (wantSearch || wantThink)) || (isXai && wantSearch)) {
         const provider = createOpenAI({ apiKey: p.apiKey || undefined, baseURL, fetch: f });
         return {
           model: provider.responses(p.modelId),
-          tools: { web_search: provider.tools.webSearch({}) },
-          searchActive: true,
+          tools: wantSearch ? { web_search: provider.tools.webSearch({}) } : undefined,
+          reasoning: wantThink ? 'high' : undefined,
+          providerOptions: wantThink && isOpenAI ? { openai: { reasoningSummary: 'auto' } } : undefined,
+          searchActive: wantSearch,
+          thinkActive: wantThink,
         };
       }
       const isOpenRouter = lower.includes('openrouter.ai');
       const isQwen = lower.includes('aliyuncs.com');
+      const isDeepSeek = lower.includes('api.deepseek.com');
+      const isOllama = p.presetId === 'ollama' || /:11434(\/|$)/.test(lower);
       const searchActive = wantSearch && (isOpenRouter || isQwen);
+      const thinkActive = wantThink;
+      const needsTransform = searchActive || thinkActive;
       const provider = createOpenAICompatible({
         name: p.handle || 'custom',
         baseURL,
@@ -118,17 +151,31 @@ export function modelCall(p: Profile, opts: { webSearch?: boolean; fetchImpl?: t
         includeUsage: true,
         // OpenRouter attributes usage to apps by these headers (shows Dissentry in its app rankings).
         headers: isOpenRouter ? { 'HTTP-Referer': 'https://dissentry.lihaila.com', 'X-Title': 'Dissentry' } : undefined,
-        transformRequestBody: searchActive
-          ? (args) => (isOpenRouter ? { ...args, plugins: [{ id: 'web' }] } : { ...args, enable_search: true })
+        transformRequestBody: needsTransform
+          ? (args) => {
+              const body: Record<string, unknown> = { ...args };
+              if (searchActive) {
+                if (isOpenRouter) body.plugins = [{ id: 'web' }];
+                else if (isQwen) body.enable_search = true;
+              }
+              if (thinkActive) {
+                if (isOpenRouter) body.reasoning = { effort: 'high' };
+                else if (isDeepSeek) body.thinking = { type: 'enabled' };
+                else if (isQwen) body.enable_thinking = true;
+                else if (isOllama) body.think = true;
+                else body.reasoning_effort = 'high';
+              }
+              return body;
+            }
           : undefined,
       });
-      return { model: provider(p.modelId), searchActive };
+      return { model: provider(p.modelId), searchActive, thinkActive };
     }
   }
 }
 
 export function languageModel(p: Profile, fetchImpl?: typeof fetch) {
-  return modelCall(p, { fetchImpl }).model;
+  return modelCall(p, { deepThink: false, fetchImpl }).model;
 }
 
 /** True when an error likely came from a specific model rejecting web-search tools/plugins. */
@@ -138,6 +185,28 @@ export function isSearchUnsupportedError(e: unknown): boolean {
   const text = `${err?.message ?? ''} ${err?.responseBody ?? ''}`;
   if (err?.statusCode === 400 || err?.statusCode === 404 || err?.statusCode === 422) {
     return /tool|search|plugin|unsupported|not support|unknown.*param|invalid.*param|responses|grounding|enable_search/i.test(text);
+  }
+  return false;
+}
+
+/** True when a specific model rejected DeepThink / reasoning parameters. */
+export function isReasoningUnsupportedError(e: unknown): boolean {
+  const err = e as { statusCode?: number; message?: string; responseBody?: string };
+  if (err?.statusCode === 401 || err?.statusCode === 403 || err?.statusCode === 429) return false;
+  const text = `${err?.message ?? ''} ${err?.responseBody ?? ''}`;
+  if (err?.statusCode === 400 || err?.statusCode === 404 || err?.statusCode === 422) {
+    return /think|reason|effort|budget|unsupported|not support|unknown.*param|invalid.*param|extra_forbidden|unrecognized/i.test(text);
+  }
+  return false;
+}
+
+/** True when a text-only model rejected attached images or binary PDF files. */
+export function isMediaUnsupportedError(e: unknown): boolean {
+  const err = e as { statusCode?: number; message?: string; responseBody?: string };
+  if (err?.statusCode === 401 || err?.statusCode === 403 || err?.statusCode === 429) return false;
+  const text = `${err?.message ?? ''} ${err?.responseBody ?? ''}`;
+  if (err?.statusCode === 400 || err?.statusCode === 404 || err?.statusCode === 422) {
+    return /image|vision|multimodal|image_url|pdf|file.*not.*support|does not support.*(image|file|media|attachment)|invalid.*content.*type/i.test(text);
   }
   return false;
 }

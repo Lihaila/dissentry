@@ -9,7 +9,8 @@ export const useNewThreadOpen = () =>
   useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => newThreadOpen);
 
 /** First line of a post, for thread titles. */
-export function threadTitle(text: string, max = 60): string {
+export function threadTitle(text: string, max = 60, fallback?: string): string {
   const line = text.replace(/@[a-z0-9][a-z0-9_.-]*/gi, '').replace(/\s+/g, ' ').trim();
-  return line.length > max ? line.slice(0, max - 1) + '…' : line || text.slice(0, max);
+  const base = line || fallback || text;
+  return base.length > max ? base.slice(0, max - 1) + '…' : base;
 }

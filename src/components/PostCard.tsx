@@ -1,15 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, Check, Copy, Globe, ImageDown, MessageCircle, Quote, RefreshCw, ScanSearch, Square, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, FileText, Globe, ImageDown, MessageCircle, Paperclip, Quote, RefreshCw, ScanSearch, Square, Trash2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useT } from '../i18n';
 import { db } from '../lib/db';
 import { regenerate, runChecks, stop } from '../lib/engine';
+import { fmtBytes } from '../lib/files';
 import { displayName, useSettings } from '../lib/settings';
 import { confirmAction } from '../lib/confirm';
 import { deletePostTree } from '../lib/store';
 import { fullDate, timeAgo } from '../lib/time';
-import type { Check as CheckRow, Post, Profile } from '../lib/types';
+import type { Attachment, Check as CheckRow, Post, Profile } from '../lib/types';
 import { markClaims } from '../lib/claims';
 import { costOf, fmtCost, fmtTokens } from '../lib/usage';
 import { Avatar } from './Avatar';
@@ -53,7 +54,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
 
   return (
     <article
-      onClick={(e) => { if (!(e.target as HTMLElement).closest('a,button,pre,.code-block,input,textarea') && !window.getSelection()?.toString()) open(); }}
+      onClick={(e) => { if (!(e.target as HTMLElement).closest('a,button,pre,.code-block,input,textarea,[data-no-open]') && !window.getSelection()?.toString()) open(); }}
       className={`relative flex gap-3 px-4 pt-3.5 ${lineBelow ? 'pb-0.5' : 'pb-2.5'} ${focused ? 'pb-3 pt-4' : 'cursor-pointer transition-colors hover:bg-slate-50/70'}`}
     >
       <div className="flex flex-col items-center">
@@ -76,12 +77,16 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
           <p className="mt-0.5 text-[12.5px] text-slate-500">{t('post.respondingTo', { handle: profiles.get(respondsTo.profileId)?.handle ?? '?' })}</p>
         )}
 
+        {!isUser && (post.reasoning || (post.status === 'streaming' && post.deepThink && !post.text)) && (
+          <ThinkingPanel reasoning={post.reasoning} thinking={post.status === 'streaming' && !post.text} />
+        )}
+
         <div className={`mt-1 text-slate-800 ${focused ? 'text-[15.5px]' : ''}`}>
           {isUser
-            ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{highlightMentions(post.text)}</p>
+            ? (post.text ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{highlightMentions(post.text)}</p> : null)
             : post.text
               ? <Markdown text={post.status === 'done' ? markClaims(post.text, notes) : post.text} streaming={post.status === 'streaming'} />
-              : post.status === 'streaming' && (
+              : post.status === 'streaming' && !post.deepThink && (
                 post.webSearch ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50/90 px-2.5 py-1 text-[12.5px] font-medium text-sky-700 ring-1 ring-sky-200/70">
                     <Globe size={13} className="animate-pulse" />
@@ -92,6 +97,10 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
                 )
               )}
         </div>
+
+        {post.attachments && post.attachments.length > 0 && (
+          <AttachmentList attachments={post.attachments} />
+        )}
 
         {post.sources && post.sources.length > 0 && (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5" aria-label={t('post.sources')}>
@@ -136,7 +145,12 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
           <div onClick={(e) => { e.stopPropagation(); navigate(`/post/${quoted.id}`); }}
             className="mt-2.5 max-h-56 cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3 transition [mask-image:linear-gradient(to_bottom,black_75%,transparent)] hover:border-slate-300 hover:bg-slate-50">
             <QuotedHeader post={quoted} profiles={profiles} userName={displayName(settings, t('post.youName'))} />
-            <div className="text-[14px]"><Markdown text={quoted.text} /></div>
+            {quoted.text && <div className="text-[14px]"><Markdown text={quoted.text} /></div>}
+            {quoted.attachments && quoted.attachments.length > 0 && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-slate-500">
+                <Paperclip size={12} /> {quoted.attachments.map((a) => a.name).join(', ')}
+              </p>
+            )}
           </div>
         )}
 
@@ -242,10 +256,162 @@ function UsageLine({ post, checks, profiles }: { post: Post; checks: CheckRow[];
           <span className="text-slate-300">·</span>
         </span>
       )}
+      {(post.deepThink || post.reasoning) && (
+        <span className="inline-flex items-center gap-1 text-violet-600/85">
+          <Brain size={11} />
+          <span>{t('composer.deepThink')}</span>
+          <span className="text-slate-300">·</span>
+        </span>
+      )}
       <span>
         {checkTokens ? t('usage.postLine', { a: fmtTokens(ans.input + ans.output), c: fmtTokens(checkTokens) }) : `${fmtTokens(ans.input + ans.output)} ${t('usage.tokens')}`}
         {total > 0 && <> · {known ? '' : '≥ '}{fmtCost(total)}</>}
       </span>
     </p>
+  );
+}
+
+function ThinkingPanel({ reasoning, thinking }: { reasoning?: string; thinking: boolean }) {
+  const t = useT();
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? thinking;
+  const hasBody = !!reasoning?.trim();
+
+  return (
+    <div data-no-open className="mt-2 mb-1.5" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        disabled={!hasBody}
+        onClick={() => setUserOpen((cur) => !(cur ?? thinking))}
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium ring-1 transition ${
+          thinking
+            ? 'bg-violet-50/90 text-violet-700 ring-violet-200/80'
+            : 'bg-slate-50 text-slate-600 ring-slate-200/80 hover:bg-slate-100/80 hover:text-ink'
+        } disabled:cursor-default`}
+      >
+        <Brain size={13} className={thinking ? 'animate-pulse text-violet-600' : 'text-violet-500'} />
+        <span>
+          {thinking ? (
+            <>{t('post.thinking')}<span className="dots"><span>.</span><span>.</span><span>.</span></span></>
+          ) : (
+            t('post.thoughtProcess')
+          )}
+        </span>
+        {hasBody && (open ? <ChevronDown size={13} className="text-slate-400" /> : <ChevronRight size={13} className="text-slate-400" />)}
+      </button>
+      {open && hasBody && (
+        <div className="mt-1.5 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-xl border border-violet-200/70 bg-violet-50/35 px-3 py-2 text-[12.5px] leading-relaxed text-slate-600">
+          {reasoning}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AttachmentList({ attachments }: { attachments: Attachment[] }) {
+  const t = useT();
+  const [lightbox, setLightbox] = useState<Attachment | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const images = attachments.filter((a) => a.kind === 'image' && a.dataUrl);
+  const files = attachments.filter((a) => a.kind !== 'image');
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox]);
+
+  return (
+    <div data-no-open className="mt-2.5 space-y-2" onClick={(e) => e.stopPropagation()}>
+      {images.length > 0 && (
+        <div className={images.length === 1 ? '' : 'grid grid-cols-2 gap-2 sm:grid-cols-3'}>
+          {images.map((img) => (
+            <button
+              key={img.id}
+              type="button"
+              onClick={() => setLightbox(img)}
+              title={img.name}
+              className="group relative block overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50 text-left transition hover:border-slate-300"
+            >
+              <img
+                src={img.dataUrl}
+                alt={img.name}
+                className={images.length === 1 ? 'max-h-72 max-w-full object-contain' : 'h-36 w-full object-cover transition group-hover:scale-[1.02]'}
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {files.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {files.map((f) => {
+            const isOpen = !!expanded[f.id];
+            return (
+              <div key={f.id} className="overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50/80">
+                <div className="flex items-center gap-2.5 px-3 py-2 text-[12.5px]">
+                  <FileText size={15} className="shrink-0 text-slate-500" />
+                  <span className="min-w-0 flex-1 truncate font-medium text-ink" title={f.name}>{f.name}</span>
+                  <span className="shrink-0 text-[11.5px] text-slate-400">{fmtBytes(f.size)}</span>
+                  {f.kind === 'file' ? (
+                    f.dataUrl ? (
+                      <a
+                        href={f.dataUrl}
+                        download={f.name}
+                        className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-ink"
+                      >
+                        PDF
+                      </a>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-slate-200/70 px-2 py-0.5 text-[10.5px] font-semibold text-slate-600">PDF</span>
+                    )
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setExpanded((cur) => ({ ...cur, [f.id]: !cur[f.id] }))}
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-ink"
+                    >
+                      {isOpen ? t('post.hideFile') : t('post.viewFile')}
+                      {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </button>
+                  )}
+                </div>
+                {f.kind === 'text' && isOpen && f.text !== undefined && (
+                  <pre className="max-h-64 overflow-auto border-t border-slate-200/80 bg-white px-3 py-2.5 font-mono text-[12px] leading-relaxed text-slate-700">
+                    {f.text}
+                  </pre>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {lightbox && lightbox.dataUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={lightbox.name}
+          onClick={() => setLightbox(null)}
+          className="animate-backdrop fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-slate-950/80 p-4 backdrop-blur-xs"
+        >
+          <div className="relative flex max-h-[90vh] max-w-[92vw] flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLightbox(null)}
+              aria-label={t('common.close')}
+              className="absolute -right-2 -top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/90 text-white shadow-lg ring-1 ring-white/20 transition hover:bg-slate-800"
+            >
+              <X size={18} />
+            </button>
+            <img src={lightbox.dataUrl} alt={lightbox.name} className="max-h-[84vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" />
+            <p className="mt-2 max-w-[85vw] truncate rounded-full bg-slate-900/75 px-3 py-1 text-[12px] font-medium text-slate-200">
+              {lightbox.name} · {fmtBytes(lightbox.size)}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

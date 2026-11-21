@@ -6,6 +6,8 @@ export interface Settings {
   autoCheck: boolean;
   /** Allow supported models (OpenRouter, Gemini, Claude, OpenAI, xAI, Qwen) to search the live web. */
   webSearch: boolean;
+  /** Enable extended reasoning (DeepThink) when asking models. */
+  deepThink: boolean;
   /** How the local server reaches providers: OS env proxy, no proxy, or a custom proxy URL. */
   proxyMode: 'system' | 'direct' | 'custom';
   proxyUrl: string;
@@ -14,7 +16,7 @@ export interface Settings {
 }
 
 const KEY = 'dissentry.settings';
-const DEFAULTS: Settings = { userName: '', autoCheck: true, webSearch: true, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
+const DEFAULTS: Settings = { userName: '', autoCheck: true, webSearch: true, deepThink: false, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
 const listeners = new Set<() => void>();
 
 let current: Settings = (() => {

@@ -177,12 +177,21 @@ describe('usage', () => {
 });
 
 import { generateText } from 'ai';
-import { isSearchUnsupportedError, modelCall, supportsWebSearch } from '../src/lib/providers';
-describe('web search provider wiring', () => {
-  const mk = (protocol: Profile['protocol'], baseUrl: string, modelId = 'm'): Profile => ({
-    ...claude, protocol, baseUrl, modelId, apiKey: 'k',
+import { splitInlineThink } from '../src/lib/engine';
+import { classifyFile, fmtBytes } from '../src/lib/files';
+import {
+  isMediaUnsupportedError,
+  isReasoningUnsupportedError,
+  isSearchUnsupportedError,
+  modelCall,
+  profileWebSearchEnabled,
+  supportsWebSearch,
+} from '../src/lib/providers';
+describe('web search & deepthink provider wiring', () => {
+  const mk = (protocol: Profile['protocol'], baseUrl: string, modelId = 'm', extra: Partial<Profile> = {}): Profile => ({
+    ...claude, protocol, baseUrl, modelId, apiKey: 'k', ...extra,
   });
-  it('identifies providers with native web search', () => {
+  it('identifies providers with native web search and respects per-model webSearch toggle', () => {
     expect(supportsWebSearch(mk('openai', 'https://openrouter.ai/api/v1'))).toBe(true);
     expect(supportsWebSearch(mk('google', 'https://generativelanguage.googleapis.com/v1beta'))).toBe(true);
     expect(supportsWebSearch(mk('anthropic', 'https://api.anthropic.com/v1'))).toBe(true);
@@ -191,9 +200,11 @@ describe('web search provider wiring', () => {
     expect(supportsWebSearch(mk('openai', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'))).toBe(true);
     expect(supportsWebSearch(mk('openai', 'http://localhost:11434/v1'))).toBe(false);
     expect(supportsWebSearch(mk('openai', 'https://api.deepseek.com/v1'))).toBe(false);
+    expect(profileWebSearchEnabled(mk('openai', 'https://openrouter.ai/api/v1', 'm', { webSearch: false }))).toBe(false);
+    expect(profileWebSearchEnabled(mk('openai', 'https://openrouter.ai/api/v1', 'm', { webSearch: true }))).toBe(true);
   });
-  it('sends the right web-search payload on the wire for each provider', async () => {
-    async function capture(profile: Profile, webSearch: boolean) {
+  it('sends the right web-search and deepthink payloads on the wire for each provider', async () => {
+    async function capture(profile: Profile, opts: { webSearch?: boolean; deepThink?: boolean }) {
       let url = '';
       let body: Record<string, unknown> = {};
       const fakeFetch: typeof fetch = async (input, init) => {
@@ -201,45 +212,143 @@ describe('web search provider wiring', () => {
         body = JSON.parse(String(init?.body ?? '{}'));
         return new Response(JSON.stringify({ error: { message: 'stop' } }), { status: 400, headers: { 'content-type': 'application/json' } });
       };
-      const call = modelCall(profile, { webSearch, fetchImpl: fakeFetch });
-      await generateText({ model: call.model, tools: call.tools, prompt: 'weather?', maxRetries: 0 }).catch(() => {});
+      const call = modelCall(profile, { ...opts, fetchImpl: fakeFetch });
+      await generateText({
+        model: call.model,
+        tools: call.tools,
+        reasoning: call.reasoning,
+        providerOptions: call.providerOptions,
+        prompt: 'weather?',
+        maxRetries: 0,
+      }).catch(() => {});
       return { url, body, call };
     }
 
-    const orOn = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017'), true);
+    const orOn = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017'), { webSearch: true });
     expect(orOn.call.searchActive).toBe(true);
+    expect(orOn.call.thinkActive).toBe(false);
     expect(orOn.url).toBe('https://openrouter.ai/api/v1/chat/completions');
     expect(orOn.body.plugins).toEqual([{ id: 'web' }]);
+    expect(orOn.body.reasoning).toBeUndefined();
 
-    const orOff = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017'), false);
-    expect(orOff.call.searchActive).toBe(false);
-    expect(orOff.body.plugins).toBeUndefined();
+    const orBoth = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017'), { webSearch: true, deepThink: true });
+    expect(orBoth.call.searchActive).toBe(true);
+    expect(orBoth.call.thinkActive).toBe(true);
+    expect(orBoth.body.plugins).toEqual([{ id: 'web' }]);
+    expect(orBoth.body.reasoning).toEqual({ effort: 'high' });
 
-    const qwenOn = await capture(mk('openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-flash'), true);
-    expect(qwenOn.body.enable_search).toBe(true);
+    const orModelWebOff = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017', { webSearch: false }), { webSearch: true });
+    expect(orModelWebOff.call.searchActive).toBe(false);
+    expect(orModelWebOff.body.plugins).toBeUndefined();
 
-    const oaOn = await capture(mk('openai', 'https://api.openai.com/v1', 'gpt-6-luna'), true);
-    expect(oaOn.url).toBe('https://api.openai.com/v1/responses');
-    expect((oaOn.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search');
+    const orModelThinkOn = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017', { deepThink: true }), {});
+    expect(orModelThinkOn.call.thinkActive).toBe(true);
+    expect(orModelThinkOn.body.reasoning).toEqual({ effort: 'high' });
 
-    const xaiOn = await capture(mk('openai', 'https://api.x.ai/v1', 'grok-4.3'), true);
+    const orThinkFallbackOff = await capture(mk('openai', 'https://openrouter.ai/api/v1', 'deepseek/deepseek-v4.1-flash-1017', { deepThink: true }), { deepThink: false });
+    expect(orThinkFallbackOff.call.thinkActive).toBe(false);
+    expect(orThinkFallbackOff.body.reasoning).toBeUndefined();
+
+    const qwenBoth = await capture(mk('openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-flash'), { webSearch: true, deepThink: true });
+    expect(qwenBoth.body.enable_search).toBe(true);
+    expect(qwenBoth.body.enable_thinking).toBe(true);
+
+    const dsThink = await capture(mk('openai', 'https://api.deepseek.com/v1', 'deepseek-chat'), { deepThink: true });
+    expect(dsThink.call.thinkActive).toBe(true);
+    expect(dsThink.body.thinking).toEqual({ type: 'enabled' });
+
+    const oaBoth = await capture(mk('openai', 'https://api.openai.com/v1', 'gpt-6-luna'), { webSearch: true, deepThink: true });
+    expect(oaBoth.url).toBe('https://api.openai.com/v1/responses');
+    expect((oaBoth.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search');
+    expect(oaBoth.body.reasoning).toMatchObject({ summary: 'auto' });
+
+    const xaiOn = await capture(mk('openai', 'https://api.x.ai/v1', 'grok-4.3'), { webSearch: true });
     expect(xaiOn.url).toBe('https://api.x.ai/v1/responses');
     expect((xaiOn.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search');
 
-    const gOn = await capture(mk('google', 'https://generativelanguage.googleapis.com/v1beta', 'gemini-3.5-flash'), true);
-    expect(JSON.stringify(gOn.body.tools)).toContain('googleSearch');
+    const gBoth = await capture(mk('google', 'https://generativelanguage.googleapis.com/v1beta', 'gemini-3.5-flash'), { webSearch: true, deepThink: true });
+    expect(JSON.stringify(gBoth.body.tools)).toContain('googleSearch');
+    expect(JSON.stringify(gBoth.body.generationConfig)).toContain('includeThoughts');
 
-    const aOn = await capture(mk('anthropic', 'https://api.anthropic.com/v1', 'claude-sonnet-5-5'), true);
-    expect((aOn.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search_20250305');
+    const aBoth = await capture(mk('anthropic', 'https://api.anthropic.com/v1', 'claude-sonnet-5-5'), { webSearch: true, deepThink: true });
+    expect((aBoth.body.tools as Array<{ type: string }>)?.[0]?.type).toBe('web_search_20250305');
+    expect(aBoth.body.thinking).toBeDefined();
 
-    const ollamaOn = await capture(mk('openai', 'http://localhost:11434/v1', 'llama3.2'), true);
+    const ollamaOn = await capture(mk('openai', 'http://localhost:11434/v1', 'qwen3', { presetId: 'ollama' }), { webSearch: true, deepThink: true });
     expect(ollamaOn.call.searchActive).toBe(false);
+    expect(ollamaOn.call.thinkActive).toBe(true);
     expect(ollamaOn.body.plugins).toBeUndefined();
-    expect(ollamaOn.body.tools).toBeUndefined();
+    expect(ollamaOn.body.think).toBe(true);
   });
-  it('detects unsupported-search errors without catching auth or rate-limit errors', () => {
+  it('detects unsupported search, reasoning, and media errors without catching auth or rate-limit errors', () => {
     expect(isSearchUnsupportedError({ statusCode: 400, message: 'web_search tool is not supported for this model' })).toBe(true);
     expect(isSearchUnsupportedError({ statusCode: 401, message: 'Invalid API key' })).toBe(false);
     expect(isSearchUnsupportedError({ statusCode: 429, message: 'rate limit exceeded' })).toBe(false);
+
+    expect(isReasoningUnsupportedError({ statusCode: 400, message: 'Unknown parameter: reasoning_effort' })).toBe(true);
+    expect(isReasoningUnsupportedError({ statusCode: 400, message: 'Model does not support thinking' })).toBe(true);
+    expect(isReasoningUnsupportedError({ statusCode: 401, message: 'Invalid API key' })).toBe(false);
+
+    expect(isMediaUnsupportedError({ statusCode: 400, message: 'This model does not support image_url inputs' })).toBe(true);
+    expect(isMediaUnsupportedError({ statusCode: 429, message: 'quota exceeded' })).toBe(false);
+  });
+});
+
+describe('inline think extraction, files & multimodal context', () => {
+  it('lifts inline <think> blocks both while streaming and when closed', () => {
+    expect(splitInlineThink('<think>step 1\nstep 2', '')).toEqual({ text: '', reasoning: 'step 1\nstep 2' });
+    expect(splitInlineThink('<think>step 1</think>\nFinal answer.', '')).toEqual({ text: 'Final answer.', reasoning: 'step 1' });
+    expect(splitInlineThink('Plain answer', 'native thought')).toEqual({ text: 'Plain answer', reasoning: 'native thought' });
+  });
+
+  it('classifies images, PDFs, and text/code files and formats byte sizes', () => {
+    expect(classifyFile({ name: 'photo.png', type: 'image/png' })).toBe('image');
+    expect(classifyFile({ name: 'report.pdf', type: 'application/pdf' })).toBe('pdf');
+    expect(classifyFile({ name: 'app.tsx', type: '' })).toBe('text');
+    expect(classifyFile({ name: 'archive.zip', type: 'application/zip' })).toBeNull();
+    expect(fmtBytes(512)).toBe('512 B');
+    expect(fmtBytes(2048)).toBe('2.0 KB');
+    expect(fmtBytes(3 * 1024 * 1024)).toBe('3.0 MB');
+  });
+
+  it('builds multimodal reply & check messages with attachments and non-dismissed dissent notes', () => {
+    const imgPost = post({
+      id: 'u1',
+      kind: 'user',
+      text: '@claude inspect these',
+      attachments: [
+        { id: 'f1', name: 'main.py', mediaType: 'text/plain', size: 22, kind: 'text', text: 'print("hello world")' },
+        { id: 'f2', name: 'shot.png', mediaType: 'image/png', size: 1000, kind: 'image', dataUrl: 'data:image/png;base64,AAAA' },
+        { id: 'f3', name: 'doc.pdf', mediaType: 'application/pdf', size: 5000, kind: 'file', dataUrl: 'data:application/pdf;base64,BBBB' },
+      ],
+    });
+    const ans = post({ id: 'a1', kind: 'model', profileId: 'c', parentId: 'u1', text: 'It prints goodbye.' });
+    const follow = post({ id: 'u2', kind: 'user', parentId: 'a1', text: '@qwen check again' });
+    const openNote: Note = {
+      id: 'n1', postId: 'a1', profileId: 'q', agreeProfileIds: [], claim: 'goodbye', correction: 'It prints hello world.', severity: 'major', status: 'accepted', createdAt: 0,
+    };
+    const dismissedNote: Note = {
+      id: 'n2', postId: 'a1', profileId: 'q', agreeProfileIds: [], claim: 'style', correction: 'ignore me', severity: 'minor', status: 'dismissed', createdAt: 0,
+    };
+
+    const msgs = buildReplyMessages({ chain: [imgPost, ans, follow], quotes: {}, notes: { a1: [openNote, dismissedNote] }, profiles }, qwen);
+    expect(msgs).toHaveLength(1);
+    expect(Array.isArray(msgs[0].content)).toBe(true);
+    const parts = msgs[0].content as Array<{ type: string; text?: string }>;
+    expect(parts.some((p) => p.type === 'image')).toBe(true);
+    expect(parts.some((p) => p.type === 'file')).toBe(true);
+    const combinedText = parts.filter((p) => p.type === 'text').map((p) => p.text).join('\n');
+    expect(combinedText).toContain('print("hello world")');
+    expect(combinedText).toContain('It prints hello world.');
+    expect(combinedText).not.toContain('ignore me');
+
+    const textOnly = buildReplyMessages({ chain: [imgPost], quotes: {}, profiles }, qwen, undefined, { includeBinary: false });
+    expect(typeof textOnly[0].content).toBe('string');
+    expect(textOnly[0].content).toContain('not shown to text-only model');
+
+    const [checkMsg] = buildCheckMessages({ chain: [imgPost], quotes: {}, profiles }, ans, claude);
+    expect(Array.isArray(checkMsg.content)).toBe(true);
+    const [checkTextOnly] = buildCheckMessages({ chain: [imgPost], quotes: {}, profiles }, ans, claude, { includeBinary: false });
+    expect(typeof checkTextOnly.content).toBe('string');
   });
 });

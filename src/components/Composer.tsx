@@ -1,13 +1,14 @@
-import { ArrowUp, Check, Globe } from 'lucide-react';
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { ArrowUp, Brain, Check, FileText, Globe, Paperclip, X } from 'lucide-react';
+import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { useT } from '../i18n';
 import { submitPost } from '../lib/engine';
+import { FILE_ACCEPT, fmtBytes, MAX_ATTACHMENTS, readAttachments, type FileReject } from '../lib/files';
 import { useProfiles } from '../lib/hooks';
 import { mentionQueryAt, parseMentions } from '../lib/mentions';
-import { supportsWebSearch } from '../lib/providers';
+import { profileWebSearchEnabled } from '../lib/providers';
 import { displayName, updateSettings, useSettings } from '../lib/settings';
-import type { Profile } from '../lib/types';
+import type { Attachment, Profile } from '../lib/types';
 import { closeNewThread } from '../lib/ui';
 import { Avatar } from './Avatar';
 import { OpenRouterButton } from './OpenRouterButton';
@@ -29,10 +30,14 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   const settings = useSettings();
   const enabled = useMemo(() => (profiles ?? []).filter((p) => p.enabled), [profiles]);
   const [text, setText] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachErr, setAttachErr] = useState('');
+  const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState<{ query: string; start: number } | null>(null);
   const [sel, setSel] = useState(0);
   const ta = useRef<HTMLTextAreaElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const mentioned = parseMentions(text, enabled.map((p) => p.handle));
   const allMentioned = /(^|\s)@all(?![\w.-])/i.test(text);
@@ -47,6 +52,51 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
 
   const refreshMenu = (value: string, caret: number) => { setMenu(mentionQueryAt(value, caret)); setSel(0); };
   const focusAt = (pos: number) => requestAnimationFrame(() => { ta.current?.focus(); ta.current?.setSelectionRange(pos, pos); });
+
+  function formatReject(err: FileReject): string {
+    if (err.reason === 'limit') return t('composer.attachLimit', { n: err.max });
+    if (err.reason === 'tooBig') return t('composer.attachTooBig', { name: err.name, max: err.max });
+    return t('composer.attachUnsupported', { name: err.name });
+  }
+
+  async function addFiles(list: File[]) {
+    if (!list.length) return;
+    setAttachErr('');
+    const { added, error } = await readAttachments(list, attachments.length);
+    if (added.length) setAttachments((cur) => [...cur, ...added].slice(0, MAX_ATTACHMENTS));
+    if (error) setAttachErr(formatReject(error));
+  }
+
+  function removeAttachment(id: string) {
+    setAttachments((cur) => cur.filter((a) => a.id !== id));
+    setAttachErr('');
+  }
+
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const items = Array.from(e.clipboardData?.items ?? []);
+    const files = items.filter((it) => it.kind === 'file').map((it) => it.getAsFile()).filter((f): f is File => !!f);
+    if (!files.length) return;
+    if (!e.clipboardData.getData('text/plain')) e.preventDefault();
+    void addFiles(files);
+  }
+
+  function onDragOver(e: DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    if (!dragging) setDragging(true);
+  }
+
+  function onDragLeave(e: DragEvent<HTMLDivElement>) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+  }
+
+  function onDrop(e: DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    setDragging(false);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    void addFiles(files);
+  }
 
   function pick(handle: string) {
     if (!menu || !ta.current) return;
@@ -66,13 +116,23 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   }
 
   async function send() {
-    if (!text.trim() || busy) return;
+    if ((!text.trim() && attachments.length === 0) || busy) return;
     setBusy(true);
     const value = text;
+    const files = attachments;
     setText('');
+    setAttachments([]);
+    setAttachErr('');
     setMenu(null);
     try {
-      const post = await submitPost({ text: value, parentId, quoteOfId, webSearch: settings.webSearch });
+      const post = await submitPost({
+        text: value,
+        parentId,
+        quoteOfId,
+        webSearch: settings.webSearch,
+        deepThink: settings.deepThink,
+        attachments: files,
+      });
       onPosted?.(post.id);
     } finally {
       setBusy(false);
@@ -106,7 +166,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   }
 
   const label = parentId ? t('composer.reply') : quoteOfId ? t('composer.quote') : t('composer.post');
-  const canSend = !!text.trim() && !busy;
+  const canSend = (!!text.trim() || attachments.length > 0) && !busy;
 
   const statusLine = (
     <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
@@ -125,7 +185,62 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
     <div className={`relative flex gap-3 px-4 ${compact ? 'py-3' : 'py-4'}`}>
       <div className="pt-1.5"><Avatar user={displayName(settings, t('post.youName'))} size={compact ? 34 : 38} /></div>
       <div className="min-w-0 flex-1">
-        <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs shadow-slate-900/[0.03] transition-all focus-within:border-slate-300 focus-within:shadow-md focus-within:shadow-slate-900/[0.05] focus-within:ring-4 focus-within:ring-slate-900/[0.03]">
+        <div
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          className={`relative rounded-2xl border bg-white shadow-xs shadow-slate-900/[0.03] transition-all focus-within:border-slate-300 focus-within:shadow-md focus-within:shadow-slate-900/[0.05] focus-within:ring-4 focus-within:ring-slate-900/[0.03] ${
+            dragging ? 'border-sky-400 ring-4 ring-sky-100' : 'border-slate-200/90'
+          }`}
+        >
+          {dragging && (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-sky-400 bg-sky-50/85 backdrop-blur-[1px]">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-semibold text-sky-700 shadow-xs ring-1 ring-sky-200">
+                <Paperclip size={14} /> {t('composer.dropHint')}
+              </span>
+            </div>
+          )}
+
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-3.5 pt-3">
+              {attachments.map((a) =>
+                a.kind === 'image' && a.dataUrl ? (
+                  <div key={a.id} className="group relative h-16 w-16 shrink-0">
+                    <img src={a.dataUrl} alt={a.name} title={a.name} className="h-full w-full rounded-xl border border-slate-200/90 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(a.id)}
+                      aria-label={t('common.remove')}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900/85 text-white shadow-xs transition hover:bg-red-600"
+                    >
+                      <X size={11} strokeWidth={2.6} />
+                    </button>
+                  </div>
+                ) : (
+                  <div key={a.id} className="inline-flex max-w-[230px] items-center gap-2 rounded-xl border border-slate-200/90 bg-slate-50/90 py-1.5 pl-2.5 pr-1.5 text-[12px]">
+                    <FileText size={15} className="shrink-0 text-slate-500" />
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-ink" title={a.name}>{a.name}</div>
+                      <div className="text-[10.5px] text-slate-400">{fmtBytes(a.size)}{a.kind === 'file' ? ' · PDF' : ''}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(a.id)}
+                      aria-label={t('common.remove')}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200/80 hover:text-ink"
+                    >
+                      <X size={12} strokeWidth={2.4} />
+                    </button>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+
+          {attachErr && (
+            <p className="px-4 pt-2 text-[12px] font-medium text-red-600">{attachErr}</p>
+          )}
+
           <textarea
             ref={ta}
             value={text}
@@ -134,47 +249,68 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
             placeholder={placeholder ?? t('composer.placeholder', { handle: enabled[0]?.handle ?? 'claude' })}
             onChange={(e) => { setText(e.target.value); refreshMenu(e.target.value, e.target.selectionStart); }}
             onKeyDown={onKey}
+            onPaste={onPaste}
             onClick={(e) => refreshMenu(text, (e.target as HTMLTextAreaElement).selectionStart)}
             onBlur={() => setTimeout(() => setMenu(null), 150)}
-            className="block max-h-[40vh] w-full resize-none overflow-y-auto bg-transparent px-4 pb-1.5 pt-3 text-[15.5px] leading-relaxed text-ink outline-none placeholder:text-slate-400"
-            style={{ fieldSizing: 'content', minHeight: compact ? 44 : 56 } as React.CSSProperties}
+            className="block max-h-[40vh] w-full resize-none overflow-y-auto bg-transparent px-4 pb-2 pt-3 text-[15.5px] leading-relaxed text-ink outline-none placeholder:text-slate-400"
+            style={{ fieldSizing: 'content', minHeight: compact ? 42 : 54 } as React.CSSProperties}
           />
-          <div className="flex items-end gap-2 px-3 pb-2.5 pt-1">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-              {!parentId ? (
-                <>
-                  {enabled.slice(0, 10).map((p) => {
-                    const on = mentioned.includes(p.handle);
-                    return (
-                      <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId}`}
-                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border py-[3px] pl-[3px] pr-2.5 text-[12px] font-medium transition active:scale-[.97] ${
-                          on
-                            ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
-                            : 'border-slate-200/70 bg-slate-50/90 text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 hover:text-ink'
-                        }`}>
-                        <Avatar profile={p} size={19} />
-                        <span>@{p.handle}</span>
-                        {on && <Check size={11} strokeWidth={2.8} className="text-sky-600" />}
-                      </button>
-                    );
-                  })}
-                  {enabled.length > 1 && (
-                    <button type="button" onClick={() => toggleMention('all')} title={t('composer.everyModel')}
-                      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-[4px] text-[12px] font-medium transition active:scale-[.97] ${
-                        allMentioned
-                          ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
-                          : 'border-dashed border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-ink'
-                      }`}>
-                      @all
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="py-1">{statusLine}</div>
+
+          {!parentId && enabled.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
+              {enabled.slice(0, 10).map((p) => {
+                const on = mentioned.includes(p.handle);
+                return (
+                  <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId}`}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border py-[3px] pl-[3px] pr-2.5 text-[12px] font-medium transition active:scale-[.97] ${
+                      on
+                        ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
+                        : 'border-slate-200/70 bg-slate-50/90 text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 hover:text-ink'
+                    }`}>
+                    <Avatar profile={p} size={19} />
+                    <span>@{p.handle}</span>
+                    {on && <Check size={11} strokeWidth={2.8} className="text-sky-600" />}
+                  </button>
+                );
+              })}
+              {enabled.length > 1 && (
+                <button type="button" onClick={() => toggleMention('all')} title={t('composer.everyModel')}
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-[4px] text-[12px] font-medium transition active:scale-[.97] ${
+                    allMentioned
+                      ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
+                      : 'border-dashed border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-ink'
+                  }`}>
+                  @all
+                </button>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              {enabled.some(supportsWebSearch) && (
+          )}
+
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100/90 px-3 py-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <input
+                ref={fileInput}
+                type="file"
+                multiple
+                accept={FILE_ACCEPT}
+                hidden
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  e.target.value = '';
+                  void addFiles(files);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={attachments.length >= MAX_ATTACHMENTS}
+                title={t('composer.attach')}
+                aria-label={t('composer.attach')}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-ink active:scale-[.97] disabled:opacity-45"
+              >
+                <Paperclip size={14.5} />
+              </button>
+              {enabled.some(profileWebSearchEnabled) && (
                 <button
                   type="button"
                   onClick={() => updateSettings({ webSearch: !settings.webSearch })}
@@ -190,6 +326,24 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                   <span>{t('composer.web')}</span>
                 </button>
               )}
+              {enabled.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ deepThink: !settings.deepThink })}
+                  aria-pressed={settings.deepThink}
+                  title={t('composer.deepThinkTip')}
+                  className={`inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-[12px] font-medium transition active:scale-[.97] ${
+                    settings.deepThink
+                      ? 'border-violet-300/90 bg-violet-50 text-violet-700 shadow-2xs'
+                      : 'border-slate-200/80 bg-white text-slate-500 hover:border-slate-300 hover:text-ink'
+                  }`}
+                >
+                  <Brain size={13.5} />
+                  <span>{t('composer.deepThink')}</span>
+                </button>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
               <kbd className="hidden rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-slate-400 sm:inline">⌘↵</kbd>
               <button
                 onClick={() => void send()}
@@ -228,11 +382,9 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
           </ul>
         )}
 
-        {!parentId && (
-          <div className="mt-2 flex min-h-[22px] items-center px-1">
-            {statusLine}
-          </div>
-        )}
+        <div className="mt-2 flex min-h-[22px] items-center px-1">
+          {statusLine}
+        </div>
       </div>
     </div>
   );
