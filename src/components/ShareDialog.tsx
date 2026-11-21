@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Check, Copy, Download, Share2 } from 'lucide-react';
+import { Check, Copy, Download, Share2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '../i18n';
 import { db } from '../lib/db';
@@ -92,12 +92,14 @@ export function ShareDialog({ post, profiles, onClose }: { post: Post; profiles:
 
   const btn = 'flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[14px] font-semibold transition disabled:opacity-50';
   return (
-    <div className="fixed inset-0 z-50 flex cursor-default items-start justify-center overflow-y-auto bg-slate-900/40 p-3 py-[5vh] backdrop-blur-[2px]"
+    <div className="animate-backdrop fixed inset-0 z-50 flex cursor-default items-start justify-center overflow-y-auto bg-slate-900/40 p-3 py-[5vh] backdrop-blur-[3px]"
       onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-[600px] rounded-3xl bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" className="animate-modal w-full max-w-[600px] rounded-3xl bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/90" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
-          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100" aria-label={t('common.close')}>✕</button>
-          <span className="text-[14px] font-semibold">{t('share.title')}</span>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink" aria-label={t('common.close')}>
+            <X size={17} />
+          </button>
+          <span className="text-[14px] font-semibold text-ink">{t('share.title')}</span>
           <span className="w-8" />
         </div>
 

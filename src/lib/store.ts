@@ -1,5 +1,6 @@
 // All persistence goes through here, so a sync backend can replace Dexie later without touching the UI.
 import { db } from './db';
+import { abortAllStreams, abortStream } from './streams';
 import type { Post, Profile } from './types';
 
 export async function getAncestors(post: Post): Promise<Post[]> {
@@ -32,10 +33,10 @@ export async function profileMap(): Promise<Map<string, Profile>> {
   return new Map(all.map((p) => [p.id, p]));
 }
 
-/** Delete a post, its whole reply subtree, and their notes/checks. */
-export async function deletePostTree(id: string) {
+/** Delete a post, its whole reply subtree, and their notes/checks. Returns deleted post IDs. */
+export async function deletePostTree(id: string): Promise<string[]> {
+  const ids: string[] = [];
   await db.transaction('rw', db.posts, db.notes, db.checks, async () => {
-    const ids: string[] = [];
     const queue = [id];
     while (queue.length) {
       const cur = queue.shift()!;
@@ -43,10 +44,12 @@ export async function deletePostTree(id: string) {
       const kids = await db.posts.where('parentId').equals(cur).primaryKeys();
       queue.push(...kids);
     }
+    ids.forEach(abortStream);
     await db.posts.bulkDelete(ids);
     await db.notes.where('postId').anyOf(ids).delete();
     await db.checks.where('postId').anyOf(ids).delete();
   });
+  return ids;
 }
 
 export async function exportAll(includeKeys: boolean) {
@@ -77,6 +80,7 @@ export async function importAll(data: Awaited<ReturnType<typeof exportAll>>) {
 }
 
 export async function clearAll() {
+  abortAllStreams();
   await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, async () => {
     await Promise.all([db.profiles.clear(), db.posts.clear(), db.notes.clear(), db.checks.clear()]);
   });

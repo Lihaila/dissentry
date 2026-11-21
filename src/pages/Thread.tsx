@@ -44,13 +44,18 @@ export function ThreadPage({ id }: { id: string }) {
         <PostCard post={post} profiles={profiles} focused onReply={() => setReplyOpen(true)} />
       </div>
       {quotes > 0 && <p className="border-t border-slate-100 px-4 py-2 text-[13px] text-slate-500">{t('thread.quoted', { n: quotes })}</p>}
-      <div className="border-y border-slate-200/80 bg-slate-50/40">
+      <div className="border-y border-slate-200/80 bg-slate-50/50">
         {replyOpen || replies.length === 0 ? (
           <Composer compact key={id} parentId={post.id} autoFocus={replyOpen} implicitHandle={author?.handle}
             placeholder={author ? t('thread.replyTo', { handle: author.handle }) : t('thread.replyMention')}
             onPosted={() => setReplyOpen(false)} />
         ) : (
-          <button onClick={() => setReplyOpen(true)} className="w-full px-4 py-3.5 text-left text-[15px] text-slate-400 hover:bg-slate-50">{t('thread.postReply')}</button>
+          <div className="px-4 py-3">
+            <button onClick={() => setReplyOpen(true)}
+              className="w-full rounded-2xl border border-slate-200/90 bg-white px-4 py-3 text-left text-[15px] text-slate-400 shadow-2xs transition hover:border-slate-300 hover:text-slate-500">
+              {t('thread.postReply')}
+            </button>
+          </div>
         )}
       </div>
       {replies.map((r) => <div key={r.id} className="border-b border-slate-200/80"><PostCard post={r} profiles={profiles} /></div>)}

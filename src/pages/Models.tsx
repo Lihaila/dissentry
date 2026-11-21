@@ -67,15 +67,17 @@ export function ModelsPage() {
       {profiles?.map((p) => editing?.id === p.id && !isNew ? (
         <Editor key={p.id} value={editing} taken={(profiles ?? []).filter((x) => x.id !== p.id).map((x) => x.handle)} onDone={() => setEditing(null)} />
       ) : (
-        <div key={p.id} className={`flex items-center gap-3 border-b border-slate-200/80 px-4 py-3.5 transition ${p.enabled ? '' : 'opacity-50'}`}>
-          <Avatar profile={p} size={42} />
+        <div key={p.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200/80 px-4 py-3.5 transition hover:bg-slate-50/60 ${p.enabled ? '' : 'opacity-55'}`}>
+          <Avatar profile={p} size={40} />
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-1.5"><b className="truncate text-ink">{p.name}</b><span className="truncate text-[14px] text-slate-500">@{p.handle}</span></div>
-            <div className="truncate text-[12.5px] text-slate-500">{p.modelId || <i>{t('models.noModel')}</i>} · {presetById(p.presetId).label}</div>
+            <div className="flex items-baseline gap-1.5"><b className="truncate text-ink">{p.name}</b><span className="truncate text-[13.5px] text-slate-500">@{p.handle}</span></div>
+            <div className="truncate text-[12px] text-slate-500">{p.modelId || <i>{t('models.noModel')}</i>} · {presetById(p.presetId).label}</div>
           </div>
-          <Switch label={t('common.checker')} on={p.isChecker} onClick={() => toggle(p, 'isChecker')} tone="amber" />
-          <Switch label={t('models.on')} on={p.enabled} onClick={() => toggle(p, 'enabled')} />
-          <button onClick={() => { setEditing({ ...p }); setIsNew(false); }} className="rounded-full border border-slate-200 px-3.5 py-1.5 text-[13px] font-semibold hover:bg-slate-50">{t('common.edit')}</button>
+          <div className="flex items-center gap-1.5 max-sm:w-full max-sm:pl-[52px]">
+            <Switch label={t('common.checker')} on={p.isChecker} onClick={() => toggle(p, 'isChecker')} tone="amber" />
+            <Switch label={t('models.on')} on={p.enabled} onClick={() => toggle(p, 'enabled')} />
+            <button onClick={() => { setEditing({ ...p }); setIsNew(false); }} className="ml-auto rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-ink shadow-2xs transition hover:border-slate-300 hover:bg-slate-50 sm:ml-0">{t('common.edit')}</button>
+          </div>
         </div>
       ))}
     </>
@@ -83,9 +85,10 @@ export function ModelsPage() {
 }
 
 function Switch({ label, on, onClick, tone }: { label: string; on: boolean; onClick: () => void; tone?: 'amber' }) {
-  const active = tone === 'amber' ? 'bg-amber-100 text-amber-800 ring-amber-200' : 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+  const active = tone === 'amber' ? 'bg-amber-100/90 text-amber-800 ring-amber-200/90' : 'bg-emerald-50 text-emerald-700 ring-emerald-200/90';
   return (
-    <button onClick={onClick} className={`hidden rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition sm:block ${on ? active : 'bg-white text-slate-400 ring-slate-200 hover:text-slate-600'}`}>
+    <button onClick={onClick} aria-pressed={on}
+      className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition active:scale-[.97] ${on ? active : 'bg-white text-slate-400 ring-slate-200 hover:text-slate-600'}`}>
       {on ? '✓ ' : ''}{label}
     </button>
   );
@@ -140,9 +143,10 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
     onDone();
   }
 
-  const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[15px] outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
+  const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[14.5px] outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
   return (
-    <div className="space-y-3.5 border-b border-slate-200/80 bg-slate-50/70 px-4 py-5">
+    <div className="border-b border-slate-200/80 px-3 py-3">
+      <div className="space-y-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-4 shadow-xs">
       <Field label={t('editor.provider')}>
         <div className="flex items-center gap-3">
           <Avatar profile={p} size={40} />
@@ -202,7 +206,8 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
         <button disabled={!valid} onClick={() => void save()} className="rounded-full bg-ink px-5 py-2 text-[13.5px] font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300">{t('common.save')}</button>
         <button disabled={!p.modelId} onClick={() => void test()} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13.5px] font-semibold hover:bg-slate-50 disabled:opacity-50">{t('editor.test')}</button>
         <button onClick={onDone} className="rounded-full px-4 py-2 text-[13.5px] font-semibold text-slate-500 hover:text-ink">{t('common.cancel')}</button>
-        {!isNew && <button onClick={() => void remove()} className="ml-auto rounded-full px-3 py-2 text-[13.5px] font-semibold text-red-500 hover:bg-red-50">{t('common.remove')}</button>}
+        {!isNew && <button onClick={() => void remove()} className="ml-auto rounded-full px-3 py-2 text-[13.5px] font-semibold text-red-500 transition hover:bg-red-50">{t('common.remove')}</button>}
+      </div>
       </div>
     </div>
   );

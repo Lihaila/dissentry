@@ -1,7 +1,8 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../server/app';
 
-const app = createApp({ allowedHosts: ['localhost'] });
+const app = createApp({ allowedHosts: ['localhost'], webDir: join(import.meta.dirname, '..', 'public') });
 const req = (path: string, headers: Record<string, string> = {}, init: RequestInit = {}) =>
   app.request(`http://localhost:4317${path}`, { ...init, headers: { host: 'localhost:4317', ...headers } });
 
@@ -23,5 +24,10 @@ describe('server guard', () => {
     const r = await req('/api/proxy', { origin: 'http://localhost:4317', 'x-dissentry-target': 'http://127.0.0.1:9/v1/models' });
     expect(r.status).toBe(502);
     expect((await r.json()).error.message).toMatch(/127\.0\.0\.1:9/);
+  });
+  it('serves webp landing assets with image/webp MIME type', async () => {
+    const r = await req('/landing/thread.webp');
+    expect(r.status).toBe(200);
+    expect(r.headers.get('content-type')).toBe('image/webp');
   });
 });

@@ -3,30 +3,160 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Dissentry: don’t take one AI’s word for it</title>
-    <meta name="description" content="Ask any AI model. Your other models fact-check the answer and add a note only when they find a mistake. Free, open source, bring your own keys." />
+    <title>Dissentry — Don’t Take One AI’s Word for It | by Lihai La</title>
+    <meta name="description" content="Community Notes for AI answers by Lihai La. Ask Claude, GPT, Gemini, DeepSeek, Qwen, Grok, or Ollama — other models fact-check the answer and add a dissent note only when something is wrong. Free, open source, local-first." />
+    <meta name="keywords" content="AI fact-checking, Community Notes for AI, multi-model AI, compare LLMs, Claude, GPT, Gemini, DeepSeek, Qwen, Grok, Ollama, OpenRouter, BYOK, local-first AI, Dissentry, Lihai La" />
+    <meta name="author" content="Lihai La LLC" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="theme-color" content="#ffffff" />
+
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="canonical" href="https://dissentry.lihaila.com/" />
+    <link rel="alternate" hreflang="en" href="https://dissentry.lihaila.com/" />
+    <link rel="alternate" hreflang="zh-Hans" href="https://dissentry.lihaila.com/?lang=zh" />
+    <link rel="alternate" hreflang="ja" href="https://dissentry.lihaila.com/?lang=ja" />
+    <link rel="alternate" hreflang="ko" href="https://dissentry.lihaila.com/?lang=ko" />
+    <link rel="alternate" hreflang="x-default" href="https://dissentry.lihaila.com/" />
 
+    <!-- Open Graph (LinkedIn, Facebook, Slack, Discord, iMessage) -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Dissentry" />
+    <meta property="og:site_name" content="Dissentry by Lihai La" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+    <meta property="og:locale:alternate" content="ko_KR" />
     <meta property="og:url" content="https://dissentry.lihaila.com/" />
-    <meta property="og:title" content="Dissentry: don’t take one AI’s word for it" />
-    <meta property="og:description" content="Ask one AI model; the others fact-check the answer and add a note only when it’s wrong. Free, open source, bring your own keys." />
-    <meta property="og:image" content="https://dissentry.lihaila.com/og.png" />
+    <meta property="og:title" content="Dissentry — Don’t Take One AI’s Word for It" />
+    <meta property="og:description" content="Ask any AI model a question. Your other models fact-check the answer and add a dissent note only when they find a mistake. Free, open source, local-first — by Lihai La." />
+    <meta property="og:image" content="https://dissentry.lihaila.com/hero-og.png" />
+    <meta property="og:image:secure_url" content="https://dissentry.lihaila.com/hero-og.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="An AI answer with a dissent note from three other AI models" />
+    <meta property="og:image:alt" content="Dissentry by Lihai La — Ask one AI model, let other models fact-check it and surface dissent notes when something is wrong." />
+
+    <!-- X / Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Dissentry: don’t take one AI’s word for it" />
-    <meta name="twitter:description" content="Ask one AI model; the others fact-check it. Free & open source." />
-    <meta name="twitter:image" content="https://dissentry.lihaila.com/og.png" />
+    <meta name="twitter:site" content="@LihaiLaLLC" />
+    <meta name="twitter:creator" content="@LihaiLaLLC" />
+    <meta name="twitter:title" content="Dissentry — Don’t Take One AI’s Word for It" />
+    <meta name="twitter:description" content="Community Notes for AI answers. Ask one model; your other models fact-check it and dissent only when it’s wrong. Free & open source by Lihai La." />
+    <meta name="twitter:image" content="https://dissentry.lihaila.com/hero-og.png" />
+    <meta name="twitter:image:alt" content="Dissentry by Lihai La — Community Notes for AI answers" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://lihaila.com/#organization",
+            "name": "Lihai La LLC",
+            "alternateName": "Lihai La",
+            "url": "https://lihaila.com/",
+            "email": "contact@lihaila.com",
+            "telephone": "+1-646-210-4451",
+            "sameAs": [
+              "https://x.com/LihaiLaLLC",
+              "https://www.linkedin.com/company/lihaila/",
+              "https://github.com/Lihaila",
+              "https://www.youtube.com/@lihaila",
+              "https://www.instagram.com/lihaila_usa/",
+              "https://www.tiktok.com/@lihaila_usa"
+            ]
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://dissentry.lihaila.com/#app",
+            "name": "Dissentry",
+            "alternateName": "Dissentry by Lihai La",
+            "url": "https://dissentry.lihaila.com/",
+            "description": "Community Notes for AI answers. Ask any AI model a question and let your other models fact-check the answer, surfacing a dissent note only when they find a real mistake. Free, open source (MIT), local-first.",
+            "applicationCategory": "UtilitiesApplication",
+            "applicationSubCategory": "AI Fact-Checking and Multi-Model Assistant",
+            "operatingSystem": "Web, macOS, Linux, Windows",
+            "browserRequirements": "Requires JavaScript and IndexedDB",
+            "inLanguage": ["en", "zh-Hans", "ja", "ko"],
+            "image": "https://dissentry.lihaila.com/hero-og.png",
+            "screenshot": "https://dissentry.lihaila.com/hero-og.png",
+            "isAccessibleForFree": true,
+            "license": "https://opensource.org/licenses/MIT",
+            "softwareHelp": "https://github.com/Lihaila/dissentry",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "publisher": {
+              "@id": "https://lihaila.com/#organization"
+            },
+            "creator": {
+              "@id": "https://lihaila.com/#organization"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is Dissentry free?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Dissentry is free and open source under the MIT license. You pay only your AI providers, directly, for the tokens you use."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Where are my API keys stored?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Only in your browser (IndexedDB). Requests go straight from your browser to each AI provider and never pass through Lihai La servers."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I use my ChatGPT Plus or Claude Pro subscription?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Not directly: providers do not allow third-party apps to use consumer subscriptions. Sign in with OpenRouter instead for one login across every major model, billed to your own account."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Which AI models are supported?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "OpenAI, Anthropic Claude, Google Gemini, DeepSeek, Qwen, xAI Grok, Mistral, Groq, OpenRouter (hundreds of models), any OpenAI-compatible endpoint, and local models via Ollama or LM Studio."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I run Dissentry on my own computer?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes: run npx dissentry. The local version includes a pass-through proxy for local models and HTTP/HTTPS/SOCKS5 network proxies."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main style="max-width:720px;margin:48px auto;padding:0 20px;font-family:system-ui,sans-serif;line-height:1.6;color:#0f172a">
+        <p><a href="https://lihaila.com/en/">Lihai La</a> / <strong>Dissentry</strong></p>
+        <h1>Don’t take one AI’s word for it.</h1>
+        <p>Dissentry is Community Notes for AI answers, built by <a href="https://lihaila.com/en/">Lihai La LLC</a>. Ask any AI model (Claude, GPT, Gemini, DeepSeek, Qwen, Grok, OpenRouter, or local Ollama/LM Studio models) and let your other models fact-check the answer and attach a dissent note only when they find a mistake.</p>
+        <p>Free &amp; open source (MIT). Your keys and conversations stay in your browser. Enable JavaScript to launch Dissentry, or run <code>npx dissentry</code> locally.</p>
+        <p><a href="https://lihaila.com/en/">Lihai La Home</a> · <a href="https://github.com/Lihaila/dissentry">GitHub</a> · <a href="https://www.npmjs.com/package/dissentry">npm</a></p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

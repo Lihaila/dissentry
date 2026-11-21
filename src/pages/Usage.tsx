@@ -68,16 +68,26 @@ export function UsagePage() {
       {sel.rows.length === 0 && <p className="px-4 py-8 text-[14px] text-slate-500">{t('usage.empty')}</p>}
       {sel.rows.map((r) => {
         const total = r.answerTokens + r.checkTokens;
+        const pctWidth = sel.total.tokens ? Math.max(2, Math.round((total / sel.total.tokens) * 100)) : 0;
+        const checkPct = total ? Math.round((r.checkTokens / total) * 100) : 0;
         return (
-          <div key={r.profile.id} className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-            <Avatar profile={r.profile} size={34} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[14px] font-semibold text-ink">{r.profile.name} <span className="font-normal text-slate-500">@{r.profile.handle}</span></div>
-              <div className="text-[12px] text-slate-500">{t('usage.split', { a: fmtTokens(r.answerTokens), c: fmtTokens(r.checkTokens) })}</div>
+          <div key={r.profile.id} className="border-b border-slate-100 px-4 py-3.5 transition hover:bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <Avatar profile={r.profile} size={36} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-semibold text-ink">{r.profile.name} <span className="font-normal text-slate-500">@{r.profile.handle}</span></div>
+                <div className="text-[12px] text-slate-500">{t('usage.split', { a: fmtTokens(r.answerTokens), c: fmtTokens(r.checkTokens) })}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[14px] font-semibold tabular-nums text-ink">{fmtTokens(total)}</div>
+                <div className="text-[12px] tabular-nums text-slate-500" title={r.priced ? '' : t('usage.noPrice')}>{r.priced ? fmtCost(r.cost) : t('usage.addPrice')}</div>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-[14px] font-semibold tabular-nums text-ink">{fmtTokens(total)}</div>
-              <div className="text-[12px] tabular-nums text-slate-500" title={r.priced ? '' : t('usage.noPrice')}>{r.priced ? fmtCost(r.cost) : t('usage.addPrice')}</div>
+            <div className="mt-2 pl-12">
+              <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100" style={{ width: `${pctWidth}%` }}>
+                <div className="bg-sky-500" style={{ width: `${100 - checkPct}%` }} />
+                <div className="bg-amber-400" style={{ width: `${checkPct}%` }} />
+              </div>
             </div>
           </div>
         );

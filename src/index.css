@@ -7,25 +7,33 @@
   --color-ink: #0f172a;
 }
 
-html { color-scheme: light; }
-body { @apply bg-[#fafafa] text-slate-900 antialiased; }
-::selection { @apply bg-sky-100; }
+@layer base {
+  html { color-scheme: light; scroll-behavior: smooth; }
+  body { @apply bg-[#f8f9fb] text-slate-900 antialiased; }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+}
+
+::selection { @apply bg-sky-100 text-slate-900; }
 
 /* Compact prose for posts */
-.md { @apply text-[15px] leading-relaxed break-words; }
+.md { @apply text-[15px] leading-[1.62] break-words; }
 .md > * + * { @apply mt-2.5; }
-.md h1, .md h2, .md h3 { @apply font-semibold mt-4; }
+.md h1, .md h2, .md h3 { @apply font-semibold tracking-tight text-ink mt-4; }
 .md h1 { @apply text-lg; } .md h2 { @apply text-base; } .md h3 { @apply text-[15px]; }
 .md ul { @apply list-disc pl-5 space-y-1; }
 .md ol { @apply list-decimal pl-5 space-y-1; }
-.md a { @apply text-sky-600 underline-offset-2 hover:underline; }
+.md a { @apply text-sky-600 underline decoration-sky-200 underline-offset-2 transition-colors hover:text-sky-700 hover:decoration-sky-400; }
 .md blockquote { @apply border-l-2 border-slate-300 pl-3 text-slate-600; }
-.md :not(pre) > code { @apply rounded bg-slate-100 px-1 py-0.5 text-[0.85em]; }
-.md pre { @apply rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-[13px] overflow-x-auto; }
-.md pre code { @apply block p-3; }
-.md table { @apply w-full text-sm border-collapse; }
-.md th, .md td { @apply border border-slate-200 px-2 py-1 text-left; }
-.md hr { @apply border-slate-200; }
+.md :not(pre) > code { @apply rounded-md border border-slate-200/70 bg-slate-100/80 px-1.5 py-0.5 font-mono text-[0.84em] text-slate-800; }
+.md pre { @apply overflow-x-auto rounded-xl border border-slate-200/90 bg-slate-50/90 text-[13px] text-slate-800; }
+.md pre code { @apply block p-3.5 font-mono leading-relaxed; }
+.md .code-block pre { @apply rounded-none border-0 bg-transparent; }
+.md table { @apply w-full text-[13.5px] border-collapse; }
+.md thead { @apply bg-slate-50/90; }
+.md th { @apply border-b border-slate-200 px-3 py-2 text-left text-[12.5px] font-semibold text-slate-700; }
+.md td { @apply border-b border-slate-100 px-3 py-2 text-left text-slate-700; }
+.md tr:last-child td { @apply border-b-0; }
+.md hr { @apply border-slate-200/80; }
 
 .caret::after { content: "▍"; @apply ml-0.5 animate-pulse text-slate-400; }
 
@@ -34,14 +42,37 @@ body { @apply bg-[#fafafa] text-slate-900 antialiased; }
 .dots span:nth-child(2) { animation-delay: .2s; }
 .dots span:nth-child(3) { animation-delay: .4s; }
 
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.animate-backdrop { animation: fade-in 140ms ease-out both; }
+.animate-modal { animation: modal-in 170ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-pop { animation: pop-in 130ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-backdrop, .animate-modal, .animate-pop { animation: none; }
+}
+
 /* Share card: larger type so text stays readable when X shows the image small. */
 .share-card .share-md .md { font-size: 27px; line-height: 1.5; color: #1e293b; }
 .share-card .share-md .md > * + * { margin-top: 14px; }
+.share-card .share-md .md .code-block { border-radius: 16px; }
 .share-card .share-md .md pre { font-size: 20px; border-radius: 16px; }
 .share-card .share-md .md pre code { padding: 18px 20px; }
 .share-card .share-md .md li + li { margin-top: 6px; }
 .share-card .share-md-note .md { font-size: 24px; color: #292524; }
+.share-card .code-chrome { display: none; }
 
 /* Disputed claims (marked with ~~ by markClaims): amber wavy underline, not a strike. */
-.md del { text-decoration: underline wavy #f59e0b; text-decoration-thickness: 1.5px; text-underline-offset: 4px; background: #fef3c7; border-radius: 3px; padding: 0 2px; color: inherit; }
+.md del {
+  text-decoration: underline wavy #f59e0b;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+  background: rgba(254, 243, 199, 0.85);
+  border-radius: 4px;
+  padding: 0 3px;
+  color: inherit;
+}
 .share-card .md del { text-decoration-thickness: 3px; text-underline-offset: 7px; }

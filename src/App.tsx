@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useEffect } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 import { db } from './lib/db';
 import { LandingPage } from './pages/Landing';
 import { useStarted } from './lib/started';
-import { useT } from './i18n';
+import { useLang, useT } from './i18n';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/Home';
 import { ThreadPage } from './pages/Thread';
@@ -15,11 +16,27 @@ import { OpenRouterCallbackPage } from './pages/OpenRouterCallback';
 
 export function App() {
   const t = useT();
+  const lang = useLang();
   const [loc] = useLocation();
   // First-time visitors (nothing set up yet) see the landing page; returning users go straight to the app.
   const started = useStarted();
   const fresh = useLiveQuery(async () => (await db.profiles.count()) === 0 && (await db.posts.count()) === 0, []);
-  if (loc === '/welcome' || (loc === '/' && fresh && !started)) return <LandingPage />;
+  const isLanding = loc === '/welcome' || (loc === '/' && fresh && !started);
+
+  useEffect(() => {
+    const suffix = 'Dissentry · Lihai La';
+    const title = isLanding
+      ? `Dissentry — ${t('land.h1')} | Lihai La`
+      : loc.startsWith('/models') ? `${t('models.title')} · ${suffix}`
+      : loc.startsWith('/trust') ? `${t('trust.title')} · ${suffix}`
+      : loc.startsWith('/usage') ? `${t('usage.title')} · ${suffix}`
+      : loc.startsWith('/settings') ? `${t('settings.title')} · ${suffix}`
+      : loc.startsWith('/post/') ? `${t('thread.title')} · ${suffix}`
+      : `${t('home.title')} · ${suffix}`;
+    document.title = title;
+  }, [loc, lang, isLanding, t]);
+
+  if (isLanding) return <LandingPage />;
   if (loc === '/' && fresh === undefined) return null; // avoid flashing the app before we know
   return (
     <Layout>

@@ -7,16 +7,18 @@ import { findMatchingNote, maxSeverity, parseCheckResult } from './notes';
 import { friendlyError, languageModel } from './providers';
 import { getSettings } from './settings';
 import { getAncestors, getQuotes, profileMap } from './store';
+import { abortStream, isRunning, trackStream, untrackStream } from './streams';
 import type { Note, Post, Profile, Usage } from './types';
 
 const toUsage = (u?: { inputTokens?: number; outputTokens?: number }): Usage | undefined =>
   u && (u.inputTokens || u.outputTokens) ? { input: u.inputTokens ?? 0, output: u.outputTokens ?? 0 } : undefined;
 
-const controllers = new Map<string, AbortController>();
-
-export const isRunning = (postId: string) => controllers.has(postId);
+export { isRunning };
 export function stop(postId: string) {
-  controllers.get(postId)?.abort();
+  if (!abortStream(postId)) {
+    // Recover posts left in "streaming" after a page reload.
+    void db.posts.where('id').equals(postId).and((p) => p.status === 'streaming').modify({ status: 'stopped' });
+  }
 }
 
 async function contextFor(chain: Post[]): Promise<ContextInput> {
@@ -66,7 +68,7 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
   };
   await db.posts.add(reply);
   const ctrl = new AbortController();
-  controllers.set(reply.id, ctrl);
+  trackStream(reply.id, ctrl);
 
   let text = '';
   let lastWrite = 0;
@@ -93,24 +95,26 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
     // The SDK ends the stream quietly on abort; treat that as stopped, not finished (and don't check it).
     if (ctrl.signal.aborted) {
       await db.posts.update(reply.id, { text, status: 'stopped' });
-      return (await db.posts.get(reply.id))!;
+      return (await db.posts.get(reply.id)) ?? { ...reply, text, status: 'stopped' };
     }
     if (!text.trim()) throw new Error(t('err.empty'));
     const usage = toUsage(await Promise.resolve(result.totalUsage).catch(() => undefined));
     await db.posts.update(reply.id, { text, status: 'done', usage });
   } catch (e) {
     const aborted = ctrl.signal.aborted;
+    const error = aborted ? undefined : friendlyError(e, profile);
     await db.posts.update(reply.id, {
       text,
       status: aborted ? 'stopped' : 'error',
-      error: aborted ? undefined : friendlyError(e, profile),
+      error,
     });
-    return (await db.posts.get(reply.id))!;
+    return (await db.posts.get(reply.id)) ?? { ...reply, text, status: aborted ? 'stopped' : 'error', error };
   } finally {
-    controllers.delete(reply.id);
+    untrackStream(reply.id);
   }
 
-  const done = (await db.posts.get(reply.id))!;
+  const done = await db.posts.get(reply.id);
+  if (!done) return { ...reply, text, status: 'done' };
   if (getSettings().autoCheck && !opts.respondsToNoteId) void runChecks(done);
   return done;
 }
@@ -144,6 +148,7 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
       const usage = toUsage(gen.totalUsage);
       const result = parseCheckResult(gen.text);
       await serialised(post.id, async () => {
+        if (!(await db.posts.get(post.id))) return;
         const existing = await db.notes.where('postId').equals(post.id).toArray();
         // A recheck replaces this checker's earlier open notes.
         for (const n of existing) {
@@ -171,9 +176,13 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
           }
         }
       });
-      await db.checks.put({ postId: post.id, profileId: checker.id, verdict: result.verdict, usage, createdAt: Date.now() });
+      if (await db.posts.get(post.id)) {
+        await db.checks.put({ postId: post.id, profileId: checker.id, verdict: result.verdict, usage, createdAt: Date.now() });
+      }
     } catch (e) {
-      await db.checks.put({ postId: post.id, profileId: checker.id, verdict: 'error', error: friendlyError(e, checker), createdAt: Date.now() });
+      if (await db.posts.get(post.id)) {
+        await db.checks.put({ postId: post.id, profileId: checker.id, verdict: 'error', error: friendlyError(e, checker), createdAt: Date.now() });
+      }
     }
   }));
 }
@@ -200,7 +209,7 @@ export async function askAuthorToRespond(note: Note) {
     'Respond to this note. If it is right, say so plainly and give the corrected answer. If it is wrong, explain why with evidence. Keep it short.',
   ].join('\n');
   const reply = await runReply(author, post, { extraUserMessage: extra, respondsToNoteId: note.id });
-  await db.notes.update(note.id, { responsePostId: reply.id });
+  if (await db.posts.get(reply.id)) await db.notes.update(note.id, { responsePostId: reply.id });
 }
 
 export const setNoteStatus = (id: string, status: Note['status']) => db.notes.update(id, { status });
