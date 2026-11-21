@@ -5,6 +5,7 @@ import { Avatar } from '../components/Avatar';
 import { PageHeader } from '../components/Layout';
 import { OpenRouterButton } from '../components/OpenRouterButton';
 import { useT } from '../i18n';
+import { confirmAction } from '../lib/confirm';
 import { db, uid } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
 import { toHandle } from '../lib/mentions';
@@ -134,7 +135,7 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
 
   async function save() { await db.profiles.put({ ...p, handle: toHandle(p.handle) }); onDone(); }
   async function remove() {
-    if (!window.confirm(t('editor.removeConfirm', { handle: p.handle }))) return;
+    if (!(await confirmAction({ title: t('editor.removeTitle', { handle: p.handle }), body: t('editor.removeConfirm', { handle: p.handle }), confirmLabel: t('common.remove'), danger: true }))) return;
     await db.profiles.delete(p.id);
     onDone();
   }

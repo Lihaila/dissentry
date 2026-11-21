@@ -311,4 +311,9 @@ export const ko: Dict = {
   "land.a5": "네. \"npx dissentry\"를 실행하세요. 로컬 버전은 로컬 모델도 지원하고 프록시를 통한 전송도 가능합니다.",
   "land.ctaTitle": "모든 답변에 두 번째 의견을.",
   "land.ctaSub": "1분 안에 시작하세요. 계정도 설치도 필요 없습니다.",
+  "post.deleteThreadTitle": "이 스레드를 삭제할까요?",
+  "post.deleteTitle": "이 게시물을 삭제할까요?",
+  "post.deleteBody": "게시물과 모든 답글, 메모가 이 브라우저에서 삭제됩니다. 되돌릴 수 없습니다.",
+  "editor.removeTitle": "@{handle}을(를) 삭제할까요?",
+  'layout.about': "Dissentry 소개",
 };

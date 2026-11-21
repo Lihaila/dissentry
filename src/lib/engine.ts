@@ -90,6 +90,11 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
         throw part.error;
       }
     }
+    // The SDK ends the stream quietly on abort; treat that as stopped, not finished (and don't check it).
+    if (ctrl.signal.aborted) {
+      await db.posts.update(reply.id, { text, status: 'stopped' });
+      return (await db.posts.get(reply.id))!;
+    }
     if (!text.trim()) throw new Error(t('err.empty'));
     const usage = toUsage(await Promise.resolve(result.totalUsage).catch(() => undefined));
     await db.posts.update(reply.id, { text, status: 'done', usage });

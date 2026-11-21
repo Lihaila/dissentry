@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Route, Switch, useLocation } from 'wouter';
 import { db } from './lib/db';
-import { LandingPage, STARTED_KEY } from './pages/Landing';
+import { LandingPage } from './pages/Landing';
+import { useStarted } from './lib/started';
 import { useT } from './i18n';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/Home';
@@ -16,8 +17,9 @@ export function App() {
   const t = useT();
   const [loc] = useLocation();
   // First-time visitors (nothing set up yet) see the landing page; returning users go straight to the app.
+  const started = useStarted();
   const fresh = useLiveQuery(async () => (await db.profiles.count()) === 0 && (await db.posts.count()) === 0, []);
-  if (loc === '/welcome' || (loc === '/' && fresh && !localStorage.getItem(STARTED_KEY))) return <LandingPage />;
+  if (loc === '/welcome' || (loc === '/' && fresh && !started)) return <LandingPage />;
   if (loc === '/' && fresh === undefined) return null; // avoid flashing the app before we know
   return (
     <Layout>

@@ -3,6 +3,7 @@
 // browser calls (CORS *) for both the key exchange and the public model list.
 import { db, uid } from './db';
 import { toHandle } from './mentions';
+import { markStarted } from './started';
 import type { Profile } from './types';
 
 export const OR_BASE = 'https://openrouter.ai/api/v1';
@@ -15,7 +16,7 @@ const b64url = (bytes: ArrayBuffer | Uint8Array) =>
 const random = (n = 32) => b64url(crypto.getRandomValues(new Uint8Array(n)));
 
 export async function startOpenRouterSignIn() {
-  localStorage.setItem('dissentry.started', '1');
+  markStarted();
   const verifier = random();
   const state = random(16);
   sessionStorage.setItem(VERIFIER, verifier);

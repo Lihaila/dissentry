@@ -6,6 +6,7 @@ import { useT } from '../i18n';
 import { db } from '../lib/db';
 import { regenerate, runChecks, stop } from '../lib/engine';
 import { displayName, useSettings } from '../lib/settings';
+import { confirmAction } from '../lib/confirm';
 import { deletePostTree } from '../lib/store';
 import { fullDate, timeAgo } from '../lib/time';
 import type { Check as CheckRow, Post, Profile } from '../lib/types';
@@ -113,7 +114,11 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
           {post.kind === 'model' && post.status === 'done' && <Action label={t('post.share')} onClick={() => setSharing(true)} icon={<ImageDown size={17} />} hover="hover:text-ink hover:bg-slate-100" />}
           {post.kind === 'model' && post.status !== 'streaming' && <Action label={t('post.regenerate')} onClick={() => void regenerate(post)} icon={<RefreshCw size={16} />} hover="hover:text-violet-600 hover:bg-violet-50" />}
           <Action label={copied ? t('post.copied') : t('post.copy')} onClick={() => { void navigator.clipboard.writeText(post.text); setCopied(true); setTimeout(() => setCopied(false), 1200); }} icon={copied ? <Check size={16} /> : <Copy size={16} />} hover="hover:text-sky-600 hover:bg-sky-50" />
-          <Action label={t('post.delete')} onClick={() => { if (window.confirm(t('post.deleteConfirm'))) void deletePostTree(post.id).then(() => focused && navigate('/')); }} icon={<Trash2 size={16} />} hover="hover:text-red-600 hover:bg-red-50" />
+          <Action label={t('post.delete')} onClick={async () => {
+            const isRoot = !post.parentId;
+            const ok = await confirmAction({ title: isRoot ? t('post.deleteThreadTitle') : t('post.deleteTitle'), body: t('post.deleteBody'), confirmLabel: t('post.delete'), danger: true });
+            if (ok) { await deletePostTree(post.id); if (focused) navigate(post.parentId ? `/post/${post.parentId}` : '/'); }
+          }} icon={<Trash2 size={16} />} hover="hover:text-red-600 hover:bg-red-50" />
         </div>
       </div>
       {quoting && <QuoteDialog post={post} profiles={profiles} onClose={() => setQuoting(false)} />}
@@ -160,7 +165,7 @@ function UsageLine({ post, checks, profiles }: { post: Post; checks: CheckRow[];
   const tip = t('usage.postTip', { i: ans.input, o: ans.output, c: checkTokens });
   return (
     <p className="mt-1.5 text-[11.5px] tabular-nums text-slate-400" title={tip}>
-      {t('usage.postLine', { a: fmtTokens(ans.input + ans.output), c: fmtTokens(checkTokens) })}
+      {checkTokens ? t('usage.postLine', { a: fmtTokens(ans.input + ans.output), c: fmtTokens(checkTokens) }) : `${fmtTokens(ans.input + ans.output)} ${t('usage.tokens')}`}
       {total > 0 && <> · {known ? '' : '≥ '}{fmtCost(total)}</>}
     </p>
   );

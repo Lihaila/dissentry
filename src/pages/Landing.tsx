@@ -5,9 +5,8 @@ import { Logo } from '../components/Logo';
 import { OpenRouterButton } from '../components/OpenRouterButton';
 import { useT, type TKey } from '../i18n';
 import { presetLogo } from '../lib/logos';
+import { markStarted } from '../lib/started';
 
-export const STARTED_KEY = 'dissentry.started';
-export const markStarted = () => localStorage.setItem(STARTED_KEY, '1');
 
 const PROVIDERS = ['openai', 'anthropic', 'google', 'deepseek', 'qwen', 'xai', 'mistral', 'groq', 'openrouter', 'ollama'];
 

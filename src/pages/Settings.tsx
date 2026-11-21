@@ -3,6 +3,7 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/Layout';
 import { ProxySettings } from '../components/ProxySettings';
 import { useT } from '../i18n';
+import { confirmAction } from '../lib/confirm';
 import { hasProxy } from '../lib/providers';
 import { updateSettings, useSettings } from '../lib/settings';
 import { clearAll, exportAll, importAll } from '../lib/store';
@@ -69,8 +70,10 @@ export function SettingsPage() {
           <button className={btn} onClick={() => void doExport(true)}>{t('settings.exportKeys')}</button>
           <button className={btn} onClick={() => file.current?.click()}>{t('settings.import')}</button>
           <input ref={file} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && void doImport(e.target.files[0])} />
-          <button className={`${btn} border-red-200 text-red-600 hover:bg-red-50`} onClick={() => {
-            if (window.confirm(t('settings.clearConfirm'))) void clearAll().then(() => setMsg(t('settings.cleared')));
+          <button className={`${btn} border-red-200 text-red-600 hover:bg-red-50`} onClick={async () => {
+            if (await confirmAction({ title: t('settings.clear'), body: t('settings.clearConfirm'), confirmLabel: t('settings.clear'), danger: true })) {
+              await clearAll(); setMsg(t('settings.cleared'));
+            }
           }}>{t('settings.clear')}</button>
         </div>
         {msg && <p className="mt-2 text-[13px]">{msg}</p>}

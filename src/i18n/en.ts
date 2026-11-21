@@ -309,6 +309,11 @@ export const en = {
   "land.a5": "Yes: run “npx dissentry”. The local version also works with local models and lets you route requests through a proxy.",
   "land.ctaTitle": "Get a second opinion on every answer.",
   "land.ctaSub": "Start in under a minute. No account, no install.",
+  "post.deleteThreadTitle": "Delete this thread?",
+  "post.deleteTitle": "Delete this post?",
+  "post.deleteBody": "It and all its replies and notes will be removed from this browser. This can’t be undone.",
+  "editor.removeTitle": "Remove @{handle}?",
+  'layout.about': "About Dissentry",
 };
 
 export type Dict = typeof en;

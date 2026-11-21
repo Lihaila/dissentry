@@ -311,4 +311,9 @@ export const zh: Dict = {
   "land.a5": "可以：运行“npx dissentry”。本地版还支持本地模型，并可以通过代理转发请求。",
   "land.ctaTitle": "每个回答，都有第二意见。",
   "land.ctaSub": "一分钟内开始。无需注册，无需安装。",
+  "post.deleteThreadTitle": "删除这个话题？",
+  "post.deleteTitle": "删除这条帖子？",
+  "post.deleteBody": "它和所有回复、注释都会从这个浏览器删除，无法撤销。",
+  "editor.removeTitle": "删除@{handle}？",
+  'layout.about': "关于Dissentry",
 };

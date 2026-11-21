@@ -1,3 +1,4 @@
+import { ArrowUp } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { useT } from '../i18n';
@@ -103,23 +104,49 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   }
 
   const label = parentId ? t('composer.reply') : quoteOfId ? t('composer.quote') : t('composer.post');
+  const canSend = !!text.trim() && !busy;
   return (
-    <div className={`relative flex gap-3 px-4 ${compact ? 'py-3' : 'pb-3 pt-4'}`}>
-      <Avatar user={displayName(settings, t('post.youName'))} />
+    <div className={`relative flex gap-3 px-4 ${compact ? 'py-3' : 'pb-4 pt-4'}`}>
+      <div className="pt-1"><Avatar user={displayName(settings, t('post.youName'))} size={compact ? 34 : 40} /></div>
       <div className="min-w-0 flex-1">
-        <textarea
-          ref={ta}
-          value={text}
-          autoFocus={autoFocus}
-          rows={compact ? 2 : 3}
-          placeholder={placeholder ?? t('composer.placeholder', { handle: enabled[0]?.handle ?? 'claude' })}
-          onChange={(e) => { setText(e.target.value); refreshMenu(e.target.value, e.target.selectionStart); }}
-          onKeyDown={onKey}
-          onClick={(e) => refreshMenu(text, (e.target as HTMLTextAreaElement).selectionStart)}
-          onBlur={() => setTimeout(() => setMenu(null), 150)}
-          className="w-full resize-none bg-transparent pt-1.5 text-[17px] leading-relaxed outline-none placeholder:text-slate-400"
-          style={{ fieldSizing: 'content', minHeight: compact ? 52 : 76 } as React.CSSProperties}
-        />
+        <div className="rounded-[22px] border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03] transition focus-within:border-slate-300 focus-within:shadow-md focus-within:shadow-slate-900/[0.06]">
+          <textarea
+            ref={ta}
+            value={text}
+            autoFocus={autoFocus}
+            rows={1}
+            placeholder={placeholder ?? t('composer.placeholder', { handle: enabled[0]?.handle ?? 'claude' })}
+            onChange={(e) => { setText(e.target.value); refreshMenu(e.target.value, e.target.selectionStart); }}
+            onKeyDown={onKey}
+            onClick={(e) => refreshMenu(text, (e.target as HTMLTextAreaElement).selectionStart)}
+            onBlur={() => setTimeout(() => setMenu(null), 150)}
+            className="block max-h-[40vh] w-full resize-none overflow-y-auto bg-transparent px-4 pb-1 pt-3 text-[16px] leading-relaxed outline-none placeholder:text-slate-400"
+            style={{ fieldSizing: 'content', minHeight: compact ? 48 : 60 } as React.CSSProperties}
+          />
+          <div className="flex items-end gap-2 px-2.5 pb-2.5 pt-1">
+            <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none]">
+              {!parentId && enabled.slice(0, 10).map((p) => {
+                const on = mentioned.includes(p.handle);
+                return (
+                  <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId}`}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full border py-[3px] pl-[3px] pr-2.5 text-[12.5px] font-medium transition ${on ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-transparent bg-slate-100/80 text-slate-600 hover:bg-slate-100'}`}>
+                    <Avatar profile={p} size={20} />@{p.handle}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => void send()}
+              disabled={!canSend}
+              aria-label={label}
+              title={`${label} (⌘/Ctrl + Enter)`}
+              className={`flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full text-white transition ${canSend ? 'bg-ink hover:bg-slate-800 active:scale-95' : 'bg-slate-200 text-slate-400'} ${compact || !parentId ? 'w-9' : 'px-4 text-[13.5px] font-semibold'}`}
+            >
+              {compact || !parentId ? <ArrowUp size={18} strokeWidth={2.5} /> : label}
+            </button>
+          </div>
+        </div>
+
         {menu && matches.length > 0 && (
           <ul className="absolute z-40 mt-1 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-xl shadow-slate-900/10">
             {matches.map((m, i) => {
@@ -140,39 +167,16 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
           </ul>
         )}
 
-        {!parentId && enabled.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {enabled.slice(0, 8).map((p) => {
-              const on = mentioned.includes(p.handle);
-              return (
-                <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId}`}
-                  className={`flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2.5 text-[12.5px] font-medium transition ${on ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
-                  <Avatar profile={p} size={22} />@{p.handle}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-3">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-slate-500">
-            {askerProfiles.length > 0 ? (
-              <span className="flex items-center gap-1.5">{t('composer.asking')} <AvatarStack profiles={askerProfiles} /></span>
-            ) : (
-              <span>{t('composer.mentionHint')}</span>
-            )}
-            {settings.autoCheck && checkers.length > 0 && askerProfiles.length > 0 && (
-              <span className="flex items-center gap-1.5">{t('composer.checkedBy')} <AvatarStack profiles={checkers} /></span>
-            )}
-          </div>
-          <button
-            onClick={() => void send()}
-            disabled={!text.trim() || busy}
-            className="shrink-0 rounded-full bg-ink px-5 py-2 text-[14.5px] font-semibold text-white transition hover:bg-slate-800 disabled:bg-slate-300"
-            title="⌘/Ctrl + Enter"
-          >
-            {label}
-          </button>
+        <div className="mt-1.5 flex min-h-[22px] flex-wrap items-center gap-x-3 gap-y-1 px-1.5 text-[12px] text-slate-500">
+          {askerProfiles.length > 0 ? (
+            <span className="flex items-center gap-1.5">{t('composer.asking')} <AvatarStack profiles={askerProfiles} /></span>
+          ) : (
+            <span>{t('composer.mentionHint')}</span>
+          )}
+          {settings.autoCheck && checkers.length > 0 && askerProfiles.length > 0 && (
+            <span className="flex items-center gap-1.5">{t('composer.checkedBy')} <AvatarStack profiles={checkers} /></span>
+          )}
+          <span className="ml-auto hidden text-slate-400 sm:inline">⌘ ↵</span>
         </div>
       </div>
     </div>

@@ -311,4 +311,9 @@ export const ja: Dict = {
   "land.a5": "はい。「npx dissentry」を実行してください。ローカル版はローカルモデルにも対応し、プロキシ経由の送信もできます。",
   "land.ctaTitle": "すべての回答にセカンドオピニオンを。",
   "land.ctaSub": "1 分以内に始められます。アカウントもインストールも不要です。",
+  "post.deleteThreadTitle": "このスレッドを削除しますか？",
+  "post.deleteTitle": "この投稿を削除しますか？",
+  "post.deleteBody": "投稿とすべての返信・注記がこのブラウザから削除されます。元に戻せません。",
+  "editor.removeTitle": "@{handle} を削除しますか？",
+  'layout.about': "Dissentry について",
 };
