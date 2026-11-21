@@ -105,3 +105,10 @@ Contributions are welcome. Please open an issue first for anything large.
 ## License
 
 MIT. Provider logos come from [@lobehub/icons](https://github.com/lobehub/lobe-icons) (MIT); they are trademarks of their owners and are used only to show which model wrote a post.
+
+## Releasing (maintainers)
+
+1. Bump the version: `npm version patch` (or `minor`), which commits and creates the `vX.Y.Z` tag.
+2. `git push --follow-tags`
+
+GitHub Actions runs the tests and publishes to npm through trusted publishing (no tokens), with provenance.
