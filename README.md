@@ -17,6 +17,7 @@ You decide whether each note is right. Over time, the **Trust** page shows which
 ```
 
 - **Bring your own models.** Anthropic, OpenAI, Gemini, OpenRouter, DeepSeek, Qwen, xAI, Groq, Mistral, or any OpenAI-compatible endpoint, plus **Ollama** and **LM Studio** running locally.
+- **Four languages.** English, 简体中文, 日本語 and 한국어; follows your browser, switch any time (or link with `?lang=zh|ja|ko`).
 - **Works behind proxies.** HTTP, HTTPS and SOCKS5 proxies, with a bypass list, set in the app.
 - **Local-first.** Posts, notes and API keys live in your browser (IndexedDB). There are no accounts, no telemetry and no server-side storage.
 - **Saves money.** Let a cheap or local model answer and a strong model check. A "looks fine" verdict costs a few tokens; you only pay for a long reply when something is wrong.

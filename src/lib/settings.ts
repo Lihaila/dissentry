@@ -12,11 +12,16 @@ export interface Settings {
 }
 
 const KEY = 'dissentry.settings';
-const DEFAULTS: Settings = { userName: 'You', autoCheck: true, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
+const DEFAULTS: Settings = { userName: '', autoCheck: true, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
 const listeners = new Set<() => void>();
 
 let current: Settings = (() => {
-  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { return DEFAULTS; }
+  try {
+    const saved = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') };
+    // Older versions stored the English default; treat it as "not set" so it follows the UI language.
+    if (saved.userName === 'You') saved.userName = '';
+    return saved;
+  } catch { return DEFAULTS; }
 })();
 
 export const getSettings = () => current;
@@ -27,4 +32,9 @@ export function updateSettings(patch: Partial<Settings>) {
 }
 export function useSettings(): Settings {
   return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, getSettings);
+}
+
+/** The user's display name, or a localized "You" when they haven't set one. */
+export function displayName(s: Settings, you: string): string {
+  return s.userName.trim() || you;
 }

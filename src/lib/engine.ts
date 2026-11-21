@@ -1,6 +1,7 @@
 import { generateText, streamText } from 'ai';
 import { db, uid } from './db';
 import { buildCheckMessages, buildReplyMessages, CHECKER_SYSTEM, replySystemPrompt, type ContextInput } from './context';
+import { t } from '../i18n';
 import { parseMentions } from './mentions';
 import { findMatchingNote, maxSeverity, parseCheckResult } from './notes';
 import { friendlyError, languageModel } from './providers';
@@ -86,7 +87,7 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
         throw part.error;
       }
     }
-    if (!text.trim()) throw new Error('The model returned an empty answer.');
+    if (!text.trim()) throw new Error(t('err.empty'));
     await db.posts.update(reply.id, { text, status: 'done' });
   } catch (e) {
     const aborted = ctrl.signal.aborted;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { getSystemProxy, hasProxy, proxyFetch } from '../lib/providers';
+import { useT } from '../i18n';
+import { getSystemProxy, proxyFetch } from '../lib/providers';
 import { updateSettings, useSettings, type Settings } from '../lib/settings';
 
 const TEST_TARGETS = [
@@ -11,34 +12,26 @@ const TEST_TARGETS = [
   { label: 'Qwen (China)', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/models' },
 ];
 
-function validate(url: string): string | null {
-  if (!url.trim()) return 'Enter a proxy address.';
+function validate(url: string, t: ReturnType<typeof useT>): string | null {
+  if (!url.trim()) return t('proxy.enterAddress');
   try {
     const u = new URL(url.trim());
-    if (!['http:', 'https:', 'socks5:', 'socks5h:', 'socks:'].includes(u.protocol)) return 'Use http://, https:// or socks5://';
-    if (!u.hostname) return 'Missing host.';
-    return null;
+    if (!['http:', 'https:', 'socks5:', 'socks5h:', 'socks:'].includes(u.protocol)) return t('proxy.badScheme');
+    return u.hostname ? null : t('proxy.badUrl');
   } catch {
-    return 'Looks like: http://127.0.0.1:7890 or socks5://127.0.0.1:1080';
+    return t('proxy.badUrl');
   }
 }
 
+/** Only rendered when the local Dissentry server is present (npx / Docker). */
 export function ProxySettings() {
+  const t = useT();
   const s = useSettings();
   const [target, setTarget] = useState(TEST_TARGETS[0].url);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const sys = getSystemProxy();
-  const urlError = s.proxyMode === 'custom' ? validate(s.proxyUrl) : null;
-
-  if (!hasProxy()) {
-    return (
-      <p className="mt-1 text-[13px] text-slate-500">
-        This copy runs without the local server, so requests use your browser’s / operating system’s proxy.
-        Run <code>npx dissentry</code> to choose a proxy here.
-      </p>
-    );
-  }
+  const urlError = s.proxyMode === 'custom' ? validate(s.proxyUrl, t) : null;
 
   async function test() {
     setBusy(true);
@@ -47,12 +40,12 @@ export function ProxySettings() {
     try {
       // No API key: any HTTP answer (usually 401) proves the provider is reachable through this route.
       const r = await proxyFetch(target, { method: 'GET' });
-      const msec = Math.round(performance.now() - t0);
+      const ms = Math.round(performance.now() - t0);
       if (r.status === 502 || r.status === 400) {
         const j = await r.json().catch(() => ({}));
-        setResult({ ok: false, text: j.error?.message ?? `Failed (${r.status})` });
+        setResult({ ok: false, text: j.error?.message ?? `HTTP ${r.status}` });
       } else {
-        setResult({ ok: true, text: `Reachable in ${msec} ms (HTTP ${r.status}${r.status === 401 || r.status === 403 ? ', expected without a key' : ''}).` });
+        setResult({ ok: true, text: t('proxy.reachable', { ms, status: r.status }) });
       }
     } catch (e) {
       setResult({ ok: false, text: (e as Error).message });
@@ -62,50 +55,43 @@ export function ProxySettings() {
   }
 
   const opt = (mode: Settings['proxyMode'], title: string, desc: React.ReactNode) => (
-    <label className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 ${s.proxyMode === mode ? 'border-sky-500 bg-sky-50/60' : 'border-slate-200'}`}>
-      <input type="radio" name="proxyMode" className="mt-1" checked={s.proxyMode === mode} onChange={() => { updateSettings({ proxyMode: mode }); setResult(null); }} />
-      <span><b className="text-[14px]">{title}</b><br /><span className="text-[13px] text-slate-500">{desc}</span></span>
+    <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3.5 py-3 transition ${s.proxyMode === mode ? 'border-sky-300 bg-sky-50/60 ring-4 ring-sky-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+      <input type="radio" name="proxyMode" className="mt-1 accent-sky-600" checked={s.proxyMode === mode} onChange={() => { updateSettings({ proxyMode: mode }); setResult(null); }} />
+      <span><b className="text-[14px] text-ink">{title}</b><br /><span className="text-[13px] text-slate-500">{desc}</span></span>
     </label>
   );
 
-  const input = 'w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-[14px] outline-none focus:border-sky-500';
+  const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[14px] outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
   return (
     <div className="mt-3 space-y-2">
-      {opt('system', 'System', sys
-        ? <>Use the proxy from the environment: <code>{sys}</code></>
-        : <>Use HTTPS_PROXY / HTTP_PROXY if set when Dissentry starts. None detected, so requests go direct.</>)}
-      {opt('direct', 'No proxy', 'Connect to every provider directly.')}
-      {opt('custom', 'Custom proxy', 'For example your Clash, V2Ray or Shadowsocks client, or a company proxy.')}
+      {opt('system', t('proxy.system'), sys ? <>{t('proxy.systemFound')} <code>{sys}</code></> : t('proxy.systemNone'))}
+      {opt('direct', t('proxy.direct'), t('proxy.directDesc'))}
+      {opt('custom', t('proxy.custom'), t('proxy.customDesc'))}
       {s.proxyMode === 'custom' && (
-        <div className="space-y-2 pl-1">
+        <div className="space-y-3 px-1 pt-1">
           <label className="block">
-            <span className="mb-1 block text-[13px] font-semibold text-slate-600">Proxy address</span>
-            <input className={input} value={s.proxyUrl} placeholder="http://127.0.0.1:7890  or  socks5://127.0.0.1:1080"
+            <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-600">{t('proxy.address')}</span>
+            <input className={input} value={s.proxyUrl} placeholder="http://127.0.0.1:7890  ·  socks5://127.0.0.1:1080"
               onChange={(e) => { updateSettings({ proxyUrl: e.target.value }); setResult(null); }} spellCheck={false} autoComplete="off" />
-            <span className="mt-1 block text-[12px] text-slate-500">HTTP, HTTPS and SOCKS5 are supported. For a login use http://user:pass@host:port.</span>
+            <span className="mt-1 block text-[12px] text-slate-500">{t('proxy.addressHelp')}</span>
             {s.proxyUrl && urlError && <span className="mt-1 block text-[12px] text-red-500">{urlError}</span>}
           </label>
           <label className="block">
-            <span className="mb-1 block text-[13px] font-semibold text-slate-600">Don’t use the proxy for (optional)</span>
-            <input className={input} value={s.proxyBypass} placeholder=".aliyuncs.com, api.deepseek.com"
-              onChange={(e) => updateSettings({ proxyBypass: e.target.value })} spellCheck={false} />
-            <span className="mt-1 block text-[12px] text-slate-500">Comma-separated hosts; a leading dot matches subdomains. Local addresses (localhost, Ollama, LM Studio) always connect directly.</span>
+            <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-600">{t('proxy.bypass')}</span>
+            <input className={input} value={s.proxyBypass} placeholder=".aliyuncs.com, api.deepseek.com" onChange={(e) => updateSettings({ proxyBypass: e.target.value })} spellCheck={false} />
+            <span className="mt-1 block text-[12px] text-slate-500">{t('proxy.bypassHelp')}</span>
           </label>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        <select value={target} onChange={(e) => { setTarget(e.target.value); setResult(null); }}
-          className="rounded-full border border-slate-300 bg-transparent px-3 py-1.5 text-sm">
-          {TEST_TARGETS.map((t) => <option key={t.url} value={t.url}>{t.label}</option>)}
+        <select value={target} onChange={(e) => { setTarget(e.target.value); setResult(null); }} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px]">
+          {TEST_TARGETS.map((x) => <option key={x.url} value={x.url}>{x.label}</option>)}
         </select>
-        <button onClick={() => void test()} disabled={busy || !!urlError}
-          className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-semibold disabled:opacity-50">
-          {busy ? 'Testing…' : 'Test connection'}
+        <button onClick={() => void test()} disabled={busy || !!urlError} className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-semibold hover:bg-slate-50 disabled:opacity-50">
+          {busy ? t('proxy.testing') : t('proxy.test')}
         </button>
       </div>
-      {result && (
-        <p className={`rounded-lg px-3 py-2 text-[13px] ${result.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>{result.text}</p>
-      )}
+      {result && <p className={`rounded-xl px-3 py-2 text-[13px] ${result.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>{result.text}</p>}
     </div>
   );
 }

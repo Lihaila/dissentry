@@ -1,6 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogle } from '@ai-sdk/google';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { t } from '../i18n';
 import { getSettings } from './settings';
 import type { Profile } from './types';
 
@@ -115,7 +116,7 @@ async function errorText(res: Response): Promise<string> {
 /** Turn SDK / network errors into something a user can act on. */
 export function friendlyError(e: unknown, p: Profile): string {
   const err = e as { message?: string; statusCode?: number; responseBody?: string; name?: string };
-  if (err?.name === 'AbortError') return 'Stopped.';
+  if (err?.name === 'AbortError') return t('post.stopped');
   let msg = err?.message ?? String(e);
   if (err?.responseBody) {
     try {
@@ -127,16 +128,14 @@ export function friendlyError(e: unknown, p: Profile): string {
       if (err.responseBody.trim()) msg = err.responseBody.slice(0, 300);
     }
   }
-  if (!msg?.trim()) msg = err?.statusCode ? `HTTP ${err.statusCode} from ${p.baseUrl}` : `Request to ${p.baseUrl} failed.`;
+  if (!msg?.trim()) msg = err?.statusCode ? `HTTP ${err.statusCode} · ${p.baseUrl}` : t('err.unreachable', { url: p.baseUrl });
   if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
-    if (!hasProxy()) {
-      return p.baseUrl.includes('localhost') || p.baseUrl.includes('127.0.0.1')
-        ? `Could not reach ${p.baseUrl}. Is it running? Ollama must allow this site: start it with OLLAMA_ORIGINS=${location.origin} ollama serve (your browser may also ask to allow local network access). Or run "npx dissentry" on your computer.`
-        : `Your browser could not reach ${p.baseUrl}. If this provider is blocked on your network, turn on your VPN/proxy, or run "npx dissentry" and set a proxy in Settings.`;
-    }
-    return `Could not reach ${p.baseUrl}. Check Settings → Network proxy.`;
+    const local = p.baseUrl.includes('localhost') || p.baseUrl.includes('127.0.0.1');
+    if (!hasProxy()) return local ? t('err.localHosted', { url: p.baseUrl, origin: location.origin }) : t('err.blockedHosted', { url: p.baseUrl });
+    return t('err.unreachable', { url: p.baseUrl });
   }
-  if (err?.statusCode === 401 || /\b401\b|(invalid|incorrect|wrong).{0,20}key|key.{0,20}(not valid|invalid)|unauthori|authentication fail/i.test(msg)) return `Authentication failed for @${p.handle}: check the API key. (${msg})`;
-  if (err?.statusCode === 404 || /model.*not.*found|does not exist/i.test(msg)) return `Model "${p.modelId}" not found for @${p.handle}. (${msg})`;
+  if (err?.statusCode === 401 || /\b401\b|(invalid|incorrect|wrong).{0,20}key|key.{0,20}(not valid|invalid)|unauthori|authentication fail/i.test(msg)) return t('err.auth', { handle: p.handle, msg });
+  if (err?.statusCode === 404 || /model.*not.*found|does not exist/i.test(msg)) return t('err.model', { model: p.modelId, handle: p.handle, msg });
+  if (err?.statusCode === 429 || /rate.?limit|quota|insufficient.{0,10}(balance|credit)/i.test(msg)) return t('err.quota', { handle: p.handle, msg });
   return msg;
 }

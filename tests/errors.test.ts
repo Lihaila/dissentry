@@ -14,7 +14,7 @@ describe('friendlyError', () => {
     expect(friendlyError(apiErr(400, '{"error":{"message":"API key not valid. Please pass a valid API key."}}'), p)).toMatch(/Authentication failed/);
   });
   it('never returns an empty message', () => {
-    expect(friendlyError(apiErr(500, ''), p)).toBe('HTTP 500 from https://api.x.ai/v1');
+    expect(friendlyError(apiErr(500, ''), p)).toBe('HTTP 500 · https://api.x.ai/v1');
     expect(friendlyError(apiErr(502, 'Bad gateway'), p)).toBe('Bad gateway');
   });
   it('maps missing models', () => {

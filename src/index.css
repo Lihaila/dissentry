@@ -4,10 +4,12 @@
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans", "Noto Sans CJK SC", sans-serif;
   --color-note: #f59e0b;
+  --color-ink: #0f172a;
 }
 
 html { color-scheme: light; }
-body { @apply bg-white text-slate-900 antialiased; }
+body { @apply bg-[#fafafa] text-slate-900 antialiased; }
+::selection { @apply bg-sky-100; }
 
 /* Compact prose for posts */
 .md { @apply text-[15px] leading-relaxed break-words; }
