@@ -291,6 +291,8 @@ export const ja: Dict = {
   "land.h1": "1つのAIの言葉だけを信じない。",
   "land.sub": "どの AI モデルにでも質問できます。ほかのモデルが回答をファクトチェックし、誤りを見つけたときだけ注記を付けます。誰が正しく、どのモデルを信頼できるかがわかります。",
   "land.ctaKeys": "自分の API キーを使う",
+  "land.watchDemo": "32秒のデモ動画を見る",
+  "land.closeVideo": "動画を閉じる",
   "land.trustLine": "アカウント不要。キーと会話はブラウザ内だけに保存されます。",
   "land.shotAlt": "3 つのモデルから異議の注記が付いた AI の回答を表示する Dissentry",
   "land.cardAlt": "回答と異議の注記を共有用の画像にしたもの",

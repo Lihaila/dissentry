@@ -291,6 +291,8 @@ export const ko: Dict = {
   "land.h1": "AI 하나의 말만 믿지 마세요.",
   "land.sub": "어떤 AI 모델에게든 질문하세요. 다른 모델들이 답을 팩트체크하고, 오류를 찾았을 때만 메모를 답니다. 누가 맞았는지, 어떤 모델을 믿을 수 있는지 알 수 있습니다.",
   "land.ctaKeys": "내 API 키 사용하기",
+  "land.watchDemo": "32초 데모 영상 보기",
+  "land.closeVideo": "영상 닫기",
   "land.trustLine": "계정이 필요 없습니다. 키와 대화는 브라우저에만 저장됩니다.",
   "land.shotAlt": "세 모델의 이의 메모가 달린 AI 답변을 보여 주는 Dissentry",
   "land.cardAlt": "답변과 이의 메모를 공유용 이미지로 만든 것",

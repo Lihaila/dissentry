@@ -1,5 +1,5 @@
-import { ArrowRight, BadgeCheck, Check, Code2, Coins, Copy, Globe2, ImageDown, Layers, Lock, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowRight, BadgeCheck, Check, Code2, Coins, Copy, Globe2, ImageDown, Layers, Lock, Play, Sparkles, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { LihaiLaBrandLink, LihaiLaFooter, lihailaUrl } from '../components/LihaiLa';
@@ -30,10 +30,30 @@ const FAQ: [TKey, TKey][] = [
   ['land.q7', 'land.a7'],
 ];
 
+const PROMO_VIDEO_URL =
+  typeof window !== 'undefined' && window.location.hostname === 'dissentry.lihaila.com'
+    ? '/promo.mp4'
+    : 'https://dissentry.lihaila.com/promo.mp4';
+
 export function LandingPage() {
   const t = useT();
   const lang = useLang();
   const [copiedCmd, setCopiedCmd] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
+
+  useEffect(() => {
+    if (!videoOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setVideoOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [videoOpen]);
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -89,7 +109,19 @@ export function LandingPage() {
                   {t('land.ctaKeys')} <ArrowRight size={16} />
                 </Link>
               </div>
-              <p className="mt-4 text-[13px] text-slate-500">{t('land.trustLine')}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <button
+                  type="button"
+                  onClick={() => setVideoOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-amber-200/90 bg-white/90 py-1.5 pl-2 pr-3.5 text-[13.5px] font-semibold text-ink shadow-2xs transition hover:border-amber-300 hover:bg-amber-50/90 active:scale-[.98]"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-2xs">
+                    <Play size={11} className="ml-0.5 fill-current" />
+                  </span>
+                  {t('land.watchDemo')}
+                </button>
+                <p className="text-[13px] text-slate-500">{t('land.trustLine')}</p>
+              </div>
             </div>
 
             {/* Hero visual: generous bottom pad so the floating dissent card is cleanly framed, never clipped */}
@@ -187,6 +219,45 @@ export function LandingPage() {
       </main>
 
       <LihaiLaFooter />
+
+      {videoOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('land.watchDemo')}
+          onClick={() => setVideoOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm sm:p-6"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-5xl overflow-hidden rounded-2xl bg-slate-950 shadow-2xl ring-1 ring-white/15"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
+              <span className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white/90">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white">
+                  <Play size={10} className="ml-0.5 fill-current" />
+                </span>
+                Dissentry · {t('land.watchDemo')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setVideoOpen(false)}
+                aria-label={t('land.closeVideo')}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <video
+              src={PROMO_VIDEO_URL}
+              controls
+              autoPlay
+              playsInline
+              className="block aspect-video w-full bg-black"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

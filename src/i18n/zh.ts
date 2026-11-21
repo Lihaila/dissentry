@@ -291,6 +291,8 @@ export const zh: Dict = {
   "land.h1": "别只信一个AI的话。",
   "land.sub": "向任何AI模型提问，你的其他模型会核查回答，只在发现错误时加上纠错注释。谁对谁错、哪个模型更可信，一目了然。",
   "land.ctaKeys": "使用自己的API密钥",
+  "land.watchDemo": "观看 32 秒演示视频",
+  "land.closeVideo": "关闭视频",
   "land.trustLine": "无需注册账号。密钥和对话只保存在你的浏览器里。",
   "land.shotAlt": "Dissentry界面：一个AI回答收到三个模型的纠错注释",
   "land.cardAlt": "回答与纠错注释的分享图片",

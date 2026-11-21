@@ -289,6 +289,8 @@ export const en = {
   "land.h1": "Don’t take one AI’s word for it.",
   "land.sub": "Ask any AI model a question. Your other models fact-check the answer and add a note only when they find a mistake. You see who was right, and who you can trust.",
   "land.ctaKeys": "Use your own API keys",
+  "land.watchDemo": "Watch 32s demo",
+  "land.closeVideo": "Close video",
   "land.trustLine": "No account needed. Your keys and chats stay in your browser.",
   "land.shotAlt": "Dissentry showing an AI answer with a dissent note from three other models",
   "land.cardAlt": "A shareable image of an answer and its dissent note",
