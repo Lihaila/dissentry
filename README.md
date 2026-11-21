@@ -1,114 +1,109 @@
-# Dissentry
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Lihaila/dissentry/main/public/og.png" alt="Dissentry: don't take one AI's word for it" width="800" />
+</p>
 
-**Don't take one model's word for it.**
+<h1 align="center">Dissentry</h1>
+<p align="center"><b>Don’t take one AI’s word for it.</b><br/>Ask one model. The others fact-check it, and add a note only when it’s wrong.</p>
 
-Dissentry is an X-style timeline for AI models. You `@mention` a model to ask it something, and the other models you follow act as **checkers**. They read every answer and attach a **dissent note** only when they find a real problem: a wrong fact, broken code, outdated info or a dangerous step. When several checkers flag the same claim, their notes merge ("@qwen · @gemini agree").
+<p align="center">
+  <a href="https://dissentry.lihaila.com"><b>Try it →</b></a> ·
+  <a href="https://www.npmjs.com/package/dissentry"><img src="https://img.shields.io/npm/v/dissentry?color=0f172a&label=npm" alt="npm" /></a>
+  <a href="https://github.com/Lihaila/dissentry/actions/workflows/ci.yml"><img src="https://github.com/Lihaila/dissentry/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/license-MIT-f59e0b" alt="MIT" />
+</p>
 
-You decide whether each note is right. Over time, the **Trust** page shows which models get corrected most often and whose notes hold up *on your own questions*.
+---
 
-```
-@llama  Is the Great Wall visible from space?
-  └─ Local Llama: Yes, it's the only man-made structure visible from the Moon…
+Dissentry is an X-style timeline for AI models. You `@mention` a model to ask it something, and the other models you follow act as **checkers**: they read every answer and attach a **dissent note** only when they find a real problem (a wrong fact, broken code, outdated info or a dangerous step). The disputed sentence is underlined in the answer, and when several checkers flag the same claim their notes merge (“@claude · @qwen · @gemini agree”).
 
-     📝 Dissent from @claude · @qwen agree   CRITICAL
-     "The Great Wall is visible from space with the naked eye"
-     It is not visible to the naked eye from orbit or the Moon; it is too narrow.
-     [Note is right]  [Not helpful]  [Ask @llama to respond]
-```
+You decide whether each note is right, and the **Trust** page shows which models get corrected and whose notes hold up, on *your* questions.
 
-- **Bring your own models.** Anthropic, OpenAI, Gemini, OpenRouter, DeepSeek, Qwen, xAI, Groq, Mistral, or any OpenAI-compatible endpoint, plus **Ollama** and **LM Studio** running locally.
-- **Four languages.** English, 简体中文, 日本語 and 한국어; follows your browser, switch any time (or link with `?lang=zh|ja|ko`).
-- **Works behind proxies.** HTTP, HTTPS and SOCKS5 proxies, with a bypass list, set in the app.
-- **Local-first.** Posts, notes and API keys live in your browser (IndexedDB). There are no accounts, no telemetry and no server-side storage.
-- **Saves money.** Let a cheap or local model answer and a strong model check. A "looks fine" verdict costs a few tokens; you only pay for a long reply when something is wrong.
-- **X-style threads.** Reply to a model to continue with it, `@mention` others to bring them in, or **quote-repost** any answer with a note (e.g. `@gemini is this right?`). The quoted exchange becomes context for the reply.
+<p align="center"><img src="https://raw.githubusercontent.com/Lihaila/dissentry/main/docs/screenshots/thread.jpg" alt="An answer from DeepSeek with a dissent note that Claude, Qwen and Gemini agree on" width="900" /></p>
 
-## Try it
+## Features
 
-**Hosted:** https://dissentry.lihaila.com. Your keys stay in your browser; requests go straight from your browser to each provider and never touch our server.
+- **Community notes for AI answers**: checkers speak up only when something is wrong; duplicate notes merge into a consensus.
+- **Sign in with OpenRouter**: one login for Claude, GPT, Gemini, DeepSeek, Qwen, Grok and hundreds more, billed to your own account. No keys to copy.
+- **Or bring your own keys**: OpenAI, Anthropic, Gemini, DeepSeek, Qwen, xAI, Mistral, Groq, any OpenAI-compatible endpoint, plus **Ollama** and **LM Studio** for local models.
+- **Share as image**: turn any answer and its notes into a polished card for X, in one click.
+- **Token usage**: tokens and estimated cost per answer, per model, and how much checking costs compared with answering.
+- **Trust scores**: built from your own verdicts, not someone else’s benchmark.
+- **Private by design**: keys and chats live in your browser (IndexedDB). No accounts, no telemetry.
+- **Four languages**: English, 简体中文, 日本語, 한국어.
+- **Works behind proxies**: HTTP, HTTPS and SOCKS5 with a bypass list (local version).
 
-**Local (recommended for local models and maximum privacy):** see Quick start.
+<table>
+  <tr>
+    <td width="50%"><img src="https://raw.githubusercontent.com/Lihaila/dissentry/main/docs/screenshots/share-card.jpg" alt="Share-as-image card" /></td>
+    <td width="50%"><img src="https://raw.githubusercontent.com/Lihaila/dissentry/main/docs/screenshots/timeline-zh.jpg" alt="The timeline in Chinese" /><br/><br/><img src="https://raw.githubusercontent.com/Lihaila/dissentry/main/docs/screenshots/landing.jpg" alt="Landing page" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Share as image: a 2400px card ready for X</sub></td>
+    <td align="center"><sub>Full UI in Chinese, Japanese and Korean · landing page</sub></td>
+  </tr>
+</table>
 
-## Quick start
+## Get started
+
+**Hosted:** open **https://dissentry.lihaila.com**, click *Sign in with OpenRouter* (or add a model with your API key), turn on **Checker** for two or three models, and ask something. Requests go straight from your browser to each provider and never touch our server.
+
+**Local** (recommended for local models and maximum privacy; needs Node.js 20+):
 
 ```bash
 npx dissentry
 ```
 
-This opens http://localhost:4317. Go to **Models → Add model**, paste a key (or choose Ollama), turn on **Checker** for the models that should review answers, then ask something on Home.
+This opens http://localhost:4317. The local version adds a built-in pass-through proxy, so every provider works and local models need no CORS setup.
 
-Requires Node.js 20+.
-
-### Using a proxy (e.g. mainland China, company networks)
-
-Open **Settings → Network proxy** and choose:
-
-- **System**: uses `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` from the environment Dissentry was started in (the default)
-- **No proxy**: connect to every provider directly
-- **Custom proxy**: `http://`, `https://` or `socks5://` (e.g. your Clash / V2Ray client at `socks5://127.0.0.1:1080`), with optional `user:pass@`. Add a bypass list such as `.aliyuncs.com, api.deepseek.com` to reach some providers directly.
-
-**Test connection** checks that a provider is reachable through your choice. Local models (Ollama, LM Studio) always connect directly.
-
-### Docker
+**Docker:**
 
 ```bash
-docker build -t dissentry .
-docker run -p 4317:4317 dissentry
+docker build -t dissentry . && docker run -p 4317:4317 dissentry
 ```
 
-To reach Ollama on the host from inside Docker, use `http://host.docker.internal:11434/v1` as the base URL.
+Inside Docker, reach Ollama on the host at `http://host.docker.internal:11434/v1`.
 
-### Self-hosting as static files
+### Using a proxy (mainland China, company networks)
 
-`npm run build:web` and serve `dist/web` from any static host. Without the local server the app calls providers directly from the browser (all major providers allow this). See `deploy/Caddyfile.example` for a config with a strict Content-Security-Policy, and host it on its **own origin** (a subdomain), because browser storage, including API keys, is shared by everything on the same origin.
+Local version: **Settings → Network proxy**: *System* (uses `HTTPS_PROXY` / `NO_PROXY`), *No proxy*, or *Custom* (`http://`, `https://` or `socks5://`, optional `user:pass@`, bypass list such as `.aliyuncs.com, api.deepseek.com`). **Test connection** checks reachability. Hosted version: requests use your browser’s / system proxy or VPN.
+
+### Can I use my ChatGPT Plus or Claude Pro subscription?
+
+No. Providers don’t allow third-party apps to use consumer subscriptions (Anthropic explicitly banned it in 2026), and accounts that try can be suspended. *Sign in with OpenRouter* is the supported one-login alternative.
 
 ## How it works
 
-- The UI is a React single-page app. All data is stored in the browser.
-- `npx dissentry` runs a tiny local server that serves the app and a **pass-through proxy**. Browsers block many AI APIs (CORS), so requests go `browser → localhost → provider`. The proxy streams the response back and stores and logs nothing.
-- The server binds to `127.0.0.1` and rejects requests whose `Host` or `Origin` isn't local, so other websites can't use it as a proxy (including through DNS rebinding).
-- Checkers get the conversation plus the answer and must return strict JSON (`{"verdict":"ok"}` or a list of notes with claim, correction and severity). Notes from different checkers are merged by claim similarity, which also works for Chinese, Japanese and Korean.
+- React single-page app; all data in the browser. `npx dissentry` adds a tiny local server that serves the app and a stateless pass-through proxy, bound to `127.0.0.1`, rejecting requests whose `Host`/`Origin` aren’t local (blocks other sites and DNS rebinding).
+- Checkers get the conversation plus the answer and must return strict JSON (`{"verdict":"ok"}` or notes with claim, correction and severity). Notes from different checkers merge by claim similarity (CJK-aware), and the disputed sentence is located in the answer even when paraphrased.
+- Token usage comes from each provider’s response; costs use prices you set (auto-filled for OpenRouter).
+
+## Self-hosting
+
+`npm run build:web` and serve `dist/web` from any static host. See [`deploy/Caddyfile.example`](deploy/Caddyfile.example) for a config with a strict Content-Security-Policy, and host it on its **own origin** (a subdomain), because browser storage, including API keys, is shared by everything on the same origin.
 
 ## Development
 
 ```bash
 npm install
 npm run dev        # Vite dev server with the proxy built in
-npm test           # unit tests (mentions, context, note parsing/merging, trust, server guard)
-DISSENTRY_LIVE=1 OPENAI_API_KEY=… DEEPSEEK_API_KEY=… npx vitest run tests/live.test.ts
-                   # optional live test against real providers via the proxy (small models, < 1¢)
+npm test           # unit tests
 npm run build      # typecheck + web build + server bundle
-npm start          # run the production build
+DISSENTRY_LIVE=1 OPENAI_API_KEY=… npx vitest run tests/live.test.ts   # optional live provider test
 ```
-
-Code map:
 
 | Path | What |
 |---|---|
-| `src/lib/engine.ts` | posting, parallel streaming replies, checkers, note merging |
-| `src/lib/context.ts` | turns a thread (and quoted posts) into model messages; checker prompt |
-| `src/lib/notes.ts` | checker JSON parsing and note similarity |
-| `src/lib/providers.ts` | provider adapters (AI SDK), model listing, proxy fetch |
-| `src/lib/store.ts` | persistence layer (Dexie). Swap it to add sync |
-| `server/app.ts` | proxy and static server |
-
-## Roadmap
-
-- Share a post and its notes as an image
-- Web search / citations for checkers
-- Per-topic trust stats
-- Optional sync between devices
-- Desktop app
-
-Contributions are welcome. Please open an issue first for anything large.
-
-## License
-
-MIT. Provider logos come from [@lobehub/icons](https://github.com/lobehub/lobe-icons) (MIT); they are trademarks of their owners and are used only to show which model wrote a post.
+| `src/lib/engine.ts` | posting, parallel streaming replies, checkers, note merging, usage |
+| `src/lib/context.ts` | thread → model messages; checker prompt |
+| `src/lib/notes.ts`, `src/lib/claims.ts` | checker JSON parsing, note merging, disputed-claim highlighting |
+| `src/lib/providers.ts`, `src/lib/openrouter.ts` | provider adapters, OpenRouter sign-in (OAuth PKCE) |
+| `src/i18n/` | UI strings in four languages |
+| `server/` | local proxy and static server |
 
 ## Releasing (maintainers)
 
-1. Bump the version: `npm version patch` (or `minor`), which commits and creates the `vX.Y.Z` tag.
-2. `git push --follow-tags`
+`npm version patch` (or `minor`), then `git push --follow-tags`. GitHub Actions tests and publishes to npm through trusted publishing, with provenance.
 
-GitHub Actions runs the tests and publishes to npm through trusted publishing (no tokens), with provenance.
+## License
+
+MIT © Lihai La LLC. Provider logos come from [@lobehub/icons](https://github.com/lobehub/lobe-icons) (MIT); they are trademarks of their owners and are used only to show which model wrote a post.

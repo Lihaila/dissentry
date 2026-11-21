@@ -75,6 +75,8 @@ export function languageModel(p: Profile, fetchImpl?: typeof fetch) {
         apiKey: p.apiKey || undefined,
         fetch: f,
         includeUsage: true,
+        // OpenRouter attributes usage to apps by these headers (shows Dissentry in its app rankings).
+        headers: baseURL.includes('openrouter.ai') ? { 'HTTP-Referer': 'https://dissentry.lihaila.com', 'X-Title': 'Dissentry' } : undefined,
       })(p.modelId);
   }
 }

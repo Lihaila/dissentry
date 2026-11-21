@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Bot, Code2, Home, PenSquare, Plus, Settings, ShieldCheck } from 'lucide-react';
+import { BarChart3, Bot, Code2, Home, PenSquare, Plus, Settings, ShieldCheck } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { db } from '../lib/db';
@@ -18,6 +18,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { href: '/', label: t('nav.home'), icon: Home },
     { href: '/models', label: t('nav.models'), icon: Bot },
     { href: '/trust', label: t('nav.trust'), icon: ShieldCheck },
+    { href: '/usage', label: t('nav.usage'), icon: BarChart3 },
     { href: '/settings', label: t('nav.settings'), icon: Settings },
   ];
   const active = (href: string) => (href === '/' ? loc === '/' : loc.startsWith(href));

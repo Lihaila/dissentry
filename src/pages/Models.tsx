@@ -2,6 +2,7 @@ import { generateText } from 'ai';
 import { useState } from 'react';
 import { Avatar } from '../components/Avatar';
 import { PageHeader } from '../components/Layout';
+import { OpenRouterButton } from '../components/OpenRouterButton';
 import { useT } from '../i18n';
 import { db, uid } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
@@ -38,6 +39,13 @@ export function ModelsPage() {
           {t('models.hostedNpx')} <code className="rounded bg-white px-1 ring-1 ring-slate-200">npx dissentry</code>
         </div>
       )}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200/80 bg-gradient-to-r from-indigo-50/70 to-white px-4 py-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14.5px] font-semibold text-ink">{t('or.cardTitle')}</p>
+          <p className="text-[12.5px] text-slate-500">{t('or.pitch')}</p>
+        </div>
+        <OpenRouterButton />
+      </div>
       <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3">
         <p className="text-[13px] text-slate-500">{t('models.checkerHint')}</p>
         <button onClick={() => { setEditing(blank('anthropic', (profiles ?? []).map((p) => p.handle))); setIsNew(true); }}
@@ -153,6 +161,17 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
           <button onClick={() => void fetchModels()} className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-semibold hover:bg-slate-50">{t('editor.fetch')}</button>
         </div>
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('editor.inPrice')}>
+          <input className={input} inputMode="decimal" placeholder="—" value={p.inPrice ?? ''}
+            onChange={(e) => set({ inPrice: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)) || 0 })} />
+        </Field>
+        <Field label={t('editor.outPrice')}>
+          <input className={input} inputMode="decimal" placeholder="—" value={p.outPrice ?? ''}
+            onChange={(e) => set({ outPrice: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)) || 0 })} />
+        </Field>
+      </div>
+      <p className="-mt-2 text-[12px] text-slate-500">{t('editor.priceHelp')}</p>
       <Field label={t('editor.instructions')}>
         <textarea className={input} rows={2} value={p.systemPrompt} placeholder={t('editor.instructionsPlaceholder')} onChange={(e) => set({ systemPrompt: e.target.value })} />
       </Field>

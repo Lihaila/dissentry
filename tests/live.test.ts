@@ -60,8 +60,10 @@ describe.skipIf(!LIVE)('live providers via proxy', () => {
         if (part.type === 'text-delta') { text += part.text; chunks++; }
         if (part.type === 'error') throw part.error;
       }
-      console.log(`  ANSWER @${p.handle} ${ms(s)} ${chunks} chunks: ${text.replace(/\s+/g, ' ').slice(0, 160)}`);
+      const usage = await r.totalUsage;
+      console.log(`  ANSWER @${p.handle} ${ms(s)} ${chunks} chunks, usage in=${usage.inputTokens} out=${usage.outputTokens}: ${text.replace(/\s+/g, ' ').slice(0, 100)}`);
       expect(text.length).toBeGreaterThan(20);
+      expect(usage.outputTokens ?? 0).toBeGreaterThan(0); // the Usage page depends on providers reporting this
     }, 90_000);
   }
 

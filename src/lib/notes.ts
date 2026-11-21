@@ -41,7 +41,7 @@ export function parseCheckResult(text: string): CheckResult {
 }
 
 // Splits on non-letters; CJK characters become individual tokens so overlap works for Chinese/Japanese too.
-function tokens(s: string): Set<string> {
+export function tokens(s: string): Set<string> {
   const out = new Set<string>();
   const lower = s.toLowerCase();
   for (const w of lower.match(/[a-z0-9]+(?:['._-][a-z0-9]+)*/g) ?? []) if (w.length >= 3 || /\d/.test(w)) out.add(w);

@@ -7,7 +7,10 @@ import { findMatchingNote, maxSeverity, parseCheckResult } from './notes';
 import { friendlyError, languageModel } from './providers';
 import { getSettings } from './settings';
 import { getAncestors, getQuotes, profileMap } from './store';
-import type { Note, Post, Profile } from './types';
+import type { Note, Post, Profile, Usage } from './types';
+
+const toUsage = (u?: { inputTokens?: number; outputTokens?: number }): Usage | undefined =>
+  u && (u.inputTokens || u.outputTokens) ? { input: u.inputTokens ?? 0, output: u.outputTokens ?? 0 } : undefined;
 
 const controllers = new Map<string, AbortController>();
 
@@ -88,7 +91,8 @@ export async function runReply(profile: Profile, parent: Post, opts: { extraUser
       }
     }
     if (!text.trim()) throw new Error(t('err.empty'));
-    await db.posts.update(reply.id, { text, status: 'done' });
+    const usage = toUsage(await Promise.resolve(result.totalUsage).catch(() => undefined));
+    await db.posts.update(reply.id, { text, status: 'done', usage });
   } catch (e) {
     const aborted = ctrl.signal.aborted;
     await db.posts.update(reply.id, {
@@ -131,8 +135,9 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
   await Promise.all(checkers.map(async (checker) => {
     await db.checks.put({ postId: post.id, profileId: checker.id, verdict: 'pending', createdAt: Date.now() });
     try {
-      const { text } = await generateText({ model: languageModel(checker), system: CHECKER_SYSTEM, messages, maxRetries: 0 });
-      const result = parseCheckResult(text);
+      const gen = await generateText({ model: languageModel(checker), system: CHECKER_SYSTEM, messages, maxRetries: 0 });
+      const usage = toUsage(gen.totalUsage);
+      const result = parseCheckResult(gen.text);
       await serialised(post.id, async () => {
         const existing = await db.notes.where('postId').equals(post.id).toArray();
         // A recheck replaces this checker's earlier open notes.
@@ -161,7 +166,7 @@ export async function runChecks(post: Post, only?: Profile[]): Promise<void> {
           }
         }
       });
-      await db.checks.put({ postId: post.id, profileId: checker.id, verdict: result.verdict, createdAt: Date.now() });
+      await db.checks.put({ postId: post.id, profileId: checker.id, verdict: result.verdict, usage, createdAt: Date.now() });
     } catch (e) {
       await db.checks.put({ postId: post.id, profileId: checker.id, verdict: 'error', error: friendlyError(e, checker), createdAt: Date.now() });
     }

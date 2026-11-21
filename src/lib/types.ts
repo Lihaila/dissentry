@@ -1,5 +1,7 @@
 export type Protocol = 'openai' | 'anthropic' | 'google';
 
+export interface Usage { input: number; output: number }
+
 export interface Profile {
   id: string;
   /** Lowercase handle used for @mentions, e.g. "claude". */
@@ -17,6 +19,9 @@ export interface Profile {
   enabled: boolean;
   /** Reviews other models' answers and writes notes. */
   isChecker: boolean;
+  /** Optional prices in USD per million tokens, for cost estimates (auto-filled for OpenRouter). */
+  inPrice?: number;
+  outPrice?: number;
   createdAt: number;
 }
 
@@ -34,6 +39,7 @@ export interface Post {
   error?: string;
   /** Set when this post is the author's response to a note. */
   respondsToNoteId?: string;
+  usage?: Usage;
   createdAt: number;
 }
 
@@ -62,6 +68,7 @@ export interface Check {
   profileId: string;
   verdict: Verdict;
   error?: string;
+  usage?: Usage;
   createdAt: number;
 }
 

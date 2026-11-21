@@ -134,3 +134,44 @@ describe('trust', () => {
     expect([q.checksRun, q.notesWritten, q.notesAccepted]).toEqual([2, 1, 1]);
   });
 });
+
+import { markClaims } from '../src/lib/claims';
+describe('markClaims', () => {
+  const note = (claim: string, status: 'open' | 'dismissed' = 'open') => ({ claim, status });
+  it('wraps a disputed sentence even across bold markers', () => {
+    const md = 'Yes — the **Great Wall of China is visible from space with the naked eye**, and more.';
+    expect(markClaims(md, [note('The Great Wall of China is visible from space with the naked eye')]))
+      .toBe('Yes — ~~the Great Wall of China is visible from space with the naked eye~~, and more.');
+  });
+  it('falls back to the best-matching sentence when the checker paraphrased', () => {
+    const md = 'Yes — the **Great Wall of China is visible from space with the naked eye**. It is 21,196 km long.';
+    expect(markClaims(md, [note('The Great Wall is visible from space with the naked eye')]))
+      .toBe('~~Yes — the Great Wall of China is visible from space with the naked eye.~~ It is 21,196 km long.');
+  });
+  it('ignores dismissed notes, short claims, code blocks and non-matches', () => {
+    const md = 'Text here.\n```\nGreat Wall visible\n```';
+    expect(markClaims(md, [note('Great Wall visible')])).toBe(md);
+    expect(markClaims('abc def ghi jkl', [note('abc def ghi', 'dismissed')])).toBe('abc def ghi jkl');
+    expect(markClaims('hello world', [note('something else entirely')])).toBe('hello world');
+  });
+});
+
+import { costOf, fmtCost, fmtTokens, summarize } from '../src/lib/usage';
+describe('usage', () => {
+  it('costs and formats', () => {
+    expect(costOf({ input: 1_000_000, output: 500_000 }, { inPrice: 2, outPrice: 10 })).toBe(7);
+    expect(costOf({ input: 10, output: 10 }, {})).toBeUndefined();
+    expect(fmtTokens(950)).toBe('950'); expect(fmtTokens(1234)).toBe('1.2k'); expect(fmtTokens(2_500_000)).toBe('2.50M');
+    expect(fmtCost(0.00213)).toBe('$0.0021'); expect(fmtCost(0.5)).toBe('$0.500'); expect(fmtCost(12.3)).toBe('$12.30');
+  });
+  it('splits answering vs checking and flags unpriced models', () => {
+    const a = { ...claude, inPrice: 1, outPrice: 1 };
+    const posts = [post({ id: 'x', kind: 'model', profileId: 'c', text: 'hi', usage: { input: 1000, output: 1000 } })];
+    const checks = [{ postId: 'x', profileId: 'q', verdict: 'ok' as const, usage: { input: 500, output: 10 }, createdAt: Date.now() }];
+    const s = summarize([a, qwen], posts, checks);
+    expect(s.total.answerTokens).toBe(2000);
+    expect(s.total.checkTokens).toBe(510);
+    expect(s.rows.find((r) => r.profile.id === 'c')!.cost).toBeCloseTo(0.002);
+    expect(s.total.priced).toBe(false);
+  });
+});

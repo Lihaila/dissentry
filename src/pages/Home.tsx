@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import { Composer } from '../components/Composer';
 import { PageHeader } from '../components/Layout';
 import { PostCard } from '../components/PostCard';
+import { OpenRouterButton } from '../components/OpenRouterButton';
 import { useT } from '../i18n';
 import { db } from '../lib/db';
 import { useProfileMap, useTick } from '../lib/hooks';
@@ -70,7 +71,11 @@ function Welcome() {
           </div>
         ))}
       </div>
-      <Link href="/models" className="mt-8 inline-flex rounded-full bg-ink px-6 py-3 text-[15px] font-semibold text-white shadow-sm hover:bg-slate-800">{t('welcome.cta')}</Link>
+      <div className="mt-8 flex flex-col items-center gap-3">
+        <OpenRouterButton size="lg" />
+        <p className="max-w-xs text-[12.5px] text-slate-500">{t('or.pitch')}</p>
+        <Link href="/models" className="text-[14px] font-semibold text-slate-600 underline-offset-4 hover:text-ink hover:underline">{t('welcome.cta')}</Link>
+      </div>
       <p className="mx-auto mt-4 max-w-sm text-[12.5px] text-slate-400">{t('welcome.privacy')}</p>
     </div>
   );

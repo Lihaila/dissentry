@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Check, Copy, MessageCircle, Quote, RefreshCw, ScanSearch, Square, Trash2 } from 'lucide-react';
+import { Check, Copy, ImageDown, MessageCircle, Quote, RefreshCw, ScanSearch, Square, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useT } from '../i18n';
@@ -8,11 +8,14 @@ import { regenerate, runChecks, stop } from '../lib/engine';
 import { displayName, useSettings } from '../lib/settings';
 import { deletePostTree } from '../lib/store';
 import { fullDate, timeAgo } from '../lib/time';
-import type { Post, Profile } from '../lib/types';
+import type { Check as CheckRow, Post, Profile } from '../lib/types';
+import { markClaims } from '../lib/claims';
+import { costOf, fmtCost, fmtTokens } from '../lib/usage';
 import { Avatar } from './Avatar';
 import { Markdown } from './Markdown';
 import { NoteCard } from './NoteCard';
 import { QuoteDialog } from './QuoteDialog';
+import { ShareDialog } from './ShareDialog';
 
 interface Props {
   post: Post;
@@ -28,6 +31,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
   const [, navigate] = useLocation();
   const settings = useSettings();
   const [quoting, setQuoting] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const profile = post.profileId ? profiles.get(post.profileId) : undefined;
   const notes = useLiveQuery(() => db.notes.where('postId').equals(post.id).sortBy('createdAt'), [post.id]) ?? [];
@@ -69,7 +73,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
           {isUser
             ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{highlightMentions(post.text)}</p>
             : post.text
-              ? <Markdown text={post.text} streaming={post.status === 'streaming'} />
+              ? <Markdown text={post.status === 'done' ? markClaims(post.text, notes) : post.text} streaming={post.status === 'streaming'} />
               : post.status === 'streaming' && <span className="dots text-2xl leading-none text-slate-400"><span>•</span><span>•</span><span>•</span></span>}
         </div>
 
@@ -99,17 +103,21 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
           </div>
         )}
 
+        {post.kind === 'model' && post.usage && <UsageLine post={post} checks={checks} profiles={profiles} />}
+
         <div className="-ml-2 mt-1 flex max-w-md justify-between text-slate-400">
           <Action label={t('post.reply')} onClick={() => (onReply ? onReply() : navigate(`/post/${post.id}?reply=1`))} icon={<MessageCircle size={17} />} count={replyCount} hover="hover:text-sky-600 hover:bg-sky-50" />
           <Action label={t('post.quote')} onClick={() => setQuoting(true)} icon={<Quote size={17} />} hover="hover:text-emerald-600 hover:bg-emerald-50" />
           {post.kind === 'model' && post.status === 'streaming' && <Action label={t('post.stop')} onClick={() => stop(post.id)} icon={<Square size={16} />} hover="hover:text-red-600 hover:bg-red-50" />}
           {post.kind === 'model' && post.status === 'done' && <Action label={t('post.checkAgain')} onClick={() => void runChecks(post)} icon={<ScanSearch size={17} />} hover="hover:text-amber-600 hover:bg-amber-50" />}
+          {post.kind === 'model' && post.status === 'done' && <Action label={t('post.share')} onClick={() => setSharing(true)} icon={<ImageDown size={17} />} hover="hover:text-ink hover:bg-slate-100" />}
           {post.kind === 'model' && post.status !== 'streaming' && <Action label={t('post.regenerate')} onClick={() => void regenerate(post)} icon={<RefreshCw size={16} />} hover="hover:text-violet-600 hover:bg-violet-50" />}
           <Action label={copied ? t('post.copied') : t('post.copy')} onClick={() => { void navigator.clipboard.writeText(post.text); setCopied(true); setTimeout(() => setCopied(false), 1200); }} icon={copied ? <Check size={16} /> : <Copy size={16} />} hover="hover:text-sky-600 hover:bg-sky-50" />
           <Action label={t('post.delete')} onClick={() => { if (window.confirm(t('post.deleteConfirm'))) void deletePostTree(post.id).then(() => focused && navigate('/')); }} icon={<Trash2 size={16} />} hover="hover:text-red-600 hover:bg-red-50" />
         </div>
       </div>
       {quoting && <QuoteDialog post={post} profiles={profiles} onClose={() => setQuoting(false)} />}
+      {sharing && <ShareDialog post={post} profiles={profiles} onClose={() => setSharing(false)} />}
     </article>
   );
 }
@@ -138,4 +146,22 @@ export function QuotedHeader({ post, profiles, userName }: { post: Post; profile
 function highlightMentions(text: string) {
   return text.split(/(@[a-z0-9][a-z0-9_.-]*)/gi).map((part, i) =>
     part.startsWith('@') ? <span key={i} className="font-medium text-sky-600">{part}</span> : part);
+}
+
+function UsageLine({ post, checks, profiles }: { post: Post; checks: CheckRow[]; profiles: Map<string, Profile> }) {
+  const t = useT();
+  const author = post.profileId ? profiles.get(post.profileId) : undefined;
+  const ans = post.usage!;
+  const checkUse = checks.filter((c) => c.usage);
+  const checkTokens = checkUse.reduce((n, c) => n + c.usage!.input + c.usage!.output, 0);
+  const costs = [costOf(ans, author), ...checkUse.map((c) => costOf(c.usage, profiles.get(c.profileId)))];
+  const known = costs.every((c) => c !== undefined);
+  const total = costs.reduce<number>((a, c) => a + (c ?? 0), 0);
+  const tip = t('usage.postTip', { i: ans.input, o: ans.output, c: checkTokens });
+  return (
+    <p className="mt-1.5 text-[11.5px] tabular-nums text-slate-400" title={tip}>
+      {t('usage.postLine', { a: fmtTokens(ans.input + ans.output), c: fmtTokens(checkTokens) })}
+      {total > 0 && <> · {known ? '' : '≥ '}{fmtCost(total)}</>}
+    </p>
+  );
 }
