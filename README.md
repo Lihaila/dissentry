@@ -6,10 +6,19 @@
 <p align="center"><b>Don’t take one AI’s word for it.</b><br/>Ask one model. The others fact-check it, and add a note only when it’s wrong.</p>
 
 <p align="center">
-  <a href="https://dissentry.lihaila.com"><b>Try it →</b></a> ·
-  <a href="https://www.npmjs.com/package/dissentry"><img src="https://img.shields.io/npm/v/dissentry?color=0f172a&label=npm" alt="npm" /></a>
-  <a href="https://github.com/Lihaila/dissentry/actions/workflows/ci.yml"><img src="https://github.com/Lihaila/dissentry/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <img src="https://img.shields.io/badge/license-MIT-f59e0b" alt="MIT" />
+  <a href="https://dissentry.lihaila.com"><strong>Try Live App →</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://dissentry.lihaila.com/welcome">Overview</a>
+  &nbsp;·&nbsp;
+  <a href="https://www.npmjs.com/package/dissentry"><code>npx dissentry</code></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/Lihaila/dissentry/releases">Releases</a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/dissentry"><img src="https://img.shields.io/npm/v/dissentry?label=npm&color=2563eb&style=flat" alt="npm version" /></a>
+  <a href="https://github.com/Lihaila/dissentry/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Lihaila/dissentry/ci.yml?branch=main&label=CI&style=flat" alt="CI status" /></a>
+  <a href="https://github.com/Lihaila/dissentry/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-f59e0b?style=flat" alt="MIT license" /></a>
 </p>
 
 ---
