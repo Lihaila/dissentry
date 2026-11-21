@@ -79,15 +79,11 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="mt-auto space-y-2.5 border-t border-slate-200/70 px-2 pt-3.5">
           <LanguageSwitcher />
           <p className="text-[11.5px] leading-relaxed text-slate-400">{t('layout.localFirst')}</p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px] text-slate-400">
             <a href={lihailaUrl(lang)} className="font-medium text-slate-500 transition hover:text-ink">Lihai La</a>
-            <span aria-hidden className="text-slate-300">·</span>
             <Link href="/welcome" className="transition hover:text-slate-700">{t('layout.about')}</Link>
-            <span aria-hidden className="text-slate-300">·</span>
             <Link href="/privacy" className="transition hover:text-slate-700">{t('footer.privacy')}</Link>
-            <span aria-hidden className="text-slate-300">·</span>
             <Link href="/terms" className="transition hover:text-slate-700">{t('footer.terms')}</Link>
-            <span aria-hidden className="text-slate-300">·</span>
             <a className="inline-flex items-center gap-1 transition hover:text-slate-700" href="https://github.com/Lihaila/dissentry" target="_blank" rel="noopener noreferrer">
               <Code2 size={12} /> {t('layout.openSource')}
             </a>

@@ -53,6 +53,7 @@ export function LihaiLaFamilyCard() {
     { label: lang === 'zh' ? '慧选' : 'Pickwise', href: `https://lihaila.com/models/${loc}/` },
     { label: 'HitPost', href: 'https://lihaila.si/' },
     { label: 'OpenVidSI', href: `https://lihaila.com/openvidsi/${loc}/` },
+    { label: lang === 'zh' ? '织课' : 'CourseWeaver', href: lang === 'zh' ? 'https://courseweaver.app/' : 'https://courseweaver.app/?lang=en' },
   ];
   return (
     <section className="rounded-2xl border border-slate-200/70 bg-white/75 p-4">
@@ -111,7 +112,7 @@ export function LihaiLaFooter() {
   return (
     <footer className="border-t border-slate-200/80 bg-slate-50/80 text-slate-600">
       <div className="mx-auto max-w-6xl px-5 pb-10 pt-14">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.55fr_1fr_1fr_1fr_1.35fr]">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.55fr]">
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <a href={lihailaUrl(lang)} className="inline-flex items-center gap-2 text-[17px] font-extrabold tracking-tight text-ink transition hover:opacity-80">
               <LihaiLaMark size={22} />
@@ -133,8 +134,7 @@ export function LihaiLaFooter() {
               {webApps.map((item) => (
                 <a key={item.href} href={item.href} className={linkCls}>{item.label}</a>
               ))}
-              <Link href="/welcome" className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <Link href="/welcome" className="flex items-center gap-1.5 text-[13.5px] font-semibold text-ink">
                 <span>Dissentry</span>
                 <span className="rounded-full bg-amber-100/90 px-1.5 py-px text-[10.5px] font-semibold text-amber-800">{t('footer.current')}</span>
               </Link>
@@ -175,7 +175,7 @@ export function LihaiLaFooter() {
                 1111B S Governors Ave STE 34093<br />
                 Dover, DE 19904
               </address>
-              <div className="flex flex-wrap items-center gap-2 pt-2">
+              <div className="flex flex-wrap items-center gap-1.5 pt-2">
                 <SocialIcon href="https://x.com/LihaiLaLLC" label="Lihai La on X">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </SocialIcon>
@@ -216,7 +216,7 @@ function SocialIcon({ href, label, children }: { href: string; label: string; ch
       rel="noopener noreferrer"
       title={label}
       aria-label={label}
-      className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-100 hover:text-ink"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-100 hover:text-ink"
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{children}</svg>
     </a>
