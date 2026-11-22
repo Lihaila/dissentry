@@ -71,20 +71,38 @@ jobs:
             "$archive"
           tar xzf "$archive"
 
+      - name: Wait for npm package processing (avoids poisoning CDN 404 cache)
+        run: |
+          set -euo pipefail
+          v="$(jq -r '.version' package.json)"
+          # npm publishes asynchronously; querying /dissentry/$v immediately can cache a 404 at the CDN edge.
+          # Wait first, then check the package root document until the new version appears.
+          sleep 60
+          for attempt in $(seq 1 16); do
+            if curl -fsSL -H "Cache-Control: no-cache" "https://registry.npmjs.org/dissentry" | jq -e --arg v "$v" '.versions[$v].mcpName != null' >/dev/null; then
+              echo "dissentry@$v is live on npm; waiting 15s for edge sync..."
+              sleep 15
+              exit 0
+            fi
+            echo "Waiting 30s for npm to finish processing dissentry@$v ($attempt/16)..."
+            sleep 30
+          done
+          echo "::warning::Timed out waiting for npm packument; attempting publish anyway."
+
       - name: Publish to Official MCP Registry (domain-verified com.lihaila/dissentry)
         env:
           MCP_REGISTRY_PRIVATE_KEY: ${{ secrets.MCP_REGISTRY_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           ./mcp-publisher login http --domain lihaila.com --private-key "$MCP_REGISTRY_PRIVATE_KEY"
-          for attempt in $(seq 1 15); do
-            echo "Publishing to Official MCP Registry (attempt $attempt/15)..."
+          for attempt in $(seq 1 6); do
+            echo "Publishing to Official MCP Registry (attempt $attempt/6)..."
             if ./mcp-publisher publish; then
               exit 0
             fi
-            if [ "$attempt" -lt 15 ]; then
-              echo "Waiting 20s for npm CDN propagation before retry..."
-              sleep 20
+            if [ "$attempt" -lt 6 ]; then
+              echo "Waiting 30s before retry..."
+              sleep 30
             fi
           done
           exit 1
