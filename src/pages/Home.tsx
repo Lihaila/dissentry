@@ -1,11 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Check } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { Composer } from '../components/Composer';
 import { PageHeader } from '../components/Layout';
-import { PostCard } from '../components/PostCard';
 import { OpenRouterButton } from '../components/OpenRouterButton';
+import { buildByParent, ReplyBranch } from '../components/ReplyTree';
 import { useT } from '../i18n';
 import { db } from '../lib/db';
 import { useProfileMap, useTick } from '../lib/hooks';
@@ -20,13 +20,26 @@ export function HomePage() {
   useTick();
   const profiles = useProfileMap();
   const [limit, setLimit] = useState(PAGE);
+  const [pendingReplyId, setPendingReplyId] = useState<string | null>(null);
   const roots = useLiveQuery(async () => {
     const posts = await db.posts.orderBy('createdAt').reverse().filter((p) => !p.parentId).limit(limit).toArray();
-    const replies = await db.posts.where('parentId').anyOf(posts.map((p) => p.id)).sortBy('createdAt');
-    const byParent = new Map<string, Post[]>();
-    for (const r of replies) byParent.set(r.parentId!, [...(byParent.get(r.parentId!) ?? []), r]);
-    return posts.map((p) => ({ post: p, replies: byParent.get(p.id) ?? [] }));
+    if (!posts.length) return [];
+    const threadPosts = await db.posts.where('rootId').anyOf(posts.map((p) => p.id)).sortBy('createdAt');
+    const byParent = buildByParent(threadPosts);
+    return posts.map((post) => ({ post, byParent }));
   }, [limit]);
+
+  useEffect(() => {
+    if (!pendingReplyId) return;
+    const el = document.getElementById(`post-${pendingReplyId}`);
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    setPendingReplyId(null);
+  }, [pendingReplyId, roots]);
+
+  const handleOf = (p: Post) => (p.kind === 'user' ? t('post.you') : profiles.get(p.profileId ?? '')?.handle);
 
   return (
     <>
@@ -37,13 +50,19 @@ export function HomePage() {
       {roots?.length === 0 && profiles.size > 0 && <Tips />}
       {roots && roots.length > 0 && (
         <div className="space-y-3 bg-slate-100/80 px-2.5 py-3 md:space-y-0 md:bg-transparent md:p-0">
-          {roots.map(({ post, replies }) => (
+          {roots.map(({ post, byParent }) => (
             <section
               key={post.id}
               className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xs md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:border-slate-200/80 md:shadow-none"
             >
-              <PostCard post={post} profiles={profiles} lineBelow={replies.length > 0} />
-              {replies.map((r, i) => <PostCard key={r.id} post={r} profiles={profiles} lineBelow={i < replies.length - 1} />)}
+              <ReplyBranch
+                post={post}
+                parent={null}
+                byParent={byParent}
+                profiles={profiles}
+                handleOf={handleOf}
+                onReplied={(replyId) => setPendingReplyId(replyId)}
+              />
             </section>
           ))}
         </div>

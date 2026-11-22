@@ -17,6 +17,7 @@ import { Avatar } from './Avatar';
 import { Markdown } from './Markdown';
 import { NoteCard } from './NoteCard';
 import { QuoteDialog } from './QuoteDialog';
+import { ReplyDialog } from './ReplyDialog';
 import { ShareDialog } from './ShareDialog';
 
 interface Props {
@@ -24,14 +25,19 @@ interface Props {
   profiles: Map<string, Profile>;
   /** Draw a connector line down to the next post in a thread. */
   lineBelow?: boolean;
+  /** Optional handle of the post being replied to, shown as X-style "Replying to @handle". */
+  replyingTo?: string;
   focused?: boolean;
   onReply?: () => void;
+  /** Called after sending a reply from this post's ReplyDialog. */
+  onReplied?: (replyId: string) => void;
 }
 
-export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props) {
+export function PostCard({ post, profiles, lineBelow, replyingTo, focused, onReply, onReplied }: Props) {
   const t = useT();
   const [, navigate] = useLocation();
   const settings = useSettings();
+  const [replying, setReplying] = useState(false);
   const [quoting, setQuoting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -78,9 +84,11 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
             </span>
           )}
         </div>
-        {respondsTo && (
+        {respondsTo ? (
           <p className="mt-0.5 text-[12.5px] text-slate-500">{t('post.respondingTo', { handle: profiles.get(respondsTo.profileId)?.handle ?? '?' })}</p>
-        )}
+        ) : replyingTo ? (
+          <p className="mt-0.5 text-[12.5px] text-slate-500">{t('reply.replyingTo', { handle: replyingTo })}</p>
+        ) : null}
 
         {!isUser && (post.reasoning || (post.status === 'streaming' && post.deepThink && !post.text)) && (
           <ThinkingPanel reasoning={post.reasoning} thinking={post.status === 'streaming' && !post.text} />
@@ -154,9 +162,9 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
 
         {quoted && (
           <div onClick={(e) => { e.stopPropagation(); navigate(`/post/${quoted.id}`); }}
-            className="mt-2.5 max-h-56 cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3 transition [mask-image:linear-gradient(to_bottom,black_75%,transparent)] hover:border-slate-300 hover:bg-slate-50">
+            className="mt-2.5 max-h-52 cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-50/50 p-3 transition hover:border-slate-300 hover:bg-slate-50">
             <QuotedHeader post={quoted} profiles={profiles} userName={displayName(settings, t('post.youName'))} />
-            {quoted.text && <div className="text-[14px]"><Markdown text={quoted.text} /></div>}
+            {quoted.text && <div className="line-clamp-5 text-[14px] text-slate-700"><Markdown text={quoted.text} /></div>}
             {quoted.attachments && quoted.attachments.length > 0 && (
               <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-slate-500">
                 <Paperclip size={12} /> {quoted.attachments.map((a) => a.name).join(', ')}
@@ -192,7 +200,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
         {post.kind === 'model' && post.usage && <UsageLine post={post} checks={checks} profiles={profiles} />}
 
         <div className="-ml-2 mt-1.5 flex items-center gap-0.5 text-slate-400 sm:gap-1">
-          <Action label={t('post.reply')} onClick={() => (onReply ? onReply() : navigate(`/post/${post.id}?reply=1`))} icon={<MessageCircle size={16} />} count={replyCount} hover="hover:text-sky-600 hover:bg-sky-50" />
+          <Action label={t('post.reply')} onClick={() => (onReply ? onReply() : setReplying(true))} icon={<MessageCircle size={16} />} count={replyCount} hover="hover:text-sky-600 hover:bg-sky-50" />
           <Action label={t('post.quote')} onClick={() => setQuoting(true)} icon={<Quote size={16} />} hover="hover:text-emerald-600 hover:bg-emerald-50" />
           {post.kind === 'model' && post.status === 'streaming' && (
             <button
@@ -216,6 +224,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
           </div>
         </div>
       </div>
+      {replying && <ReplyDialog post={post} profiles={profiles} onClose={() => setReplying(false)} onReplied={onReplied} />}
       {quoting && <QuoteDialog post={post} profiles={profiles} onClose={() => setQuoting(false)} />}
       {sharing && <ShareDialog post={post} profiles={profiles} onClose={() => setSharing(false)} />}
     </article>

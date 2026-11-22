@@ -1,5 +1,5 @@
 import { ArrowUp, Brain, Check, Cloud, FileText, Globe, Lock, Paperclip, Shield, X } from 'lucide-react';
-import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from 'wouter';
 import { useT } from '../i18n';
 import { submitPost } from '../lib/engine';
@@ -23,19 +23,21 @@ interface Props {
   implicitHandle?: string;
   /** Lock composer to local models only (inherited from a local-only thread or quoted post). */
   forceLocalOnly?: boolean;
+  /** Optional pre-filled text (e.g. pre-selecting another model when quoting). */
+  initialText?: string;
   /** Optional ref to the underlying textarea for imperative focus. */
   inputRef?: RefObject<HTMLTextAreaElement | null>;
   onPosted?: (postId: string) => void;
   compact?: boolean;
 }
 
-export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicitHandle, forceLocalOnly, inputRef, onPosted, compact }: Props) {
+export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicitHandle, forceLocalOnly, initialText = '', inputRef, onPosted, compact }: Props) {
   const t = useT();
   const profiles = useProfiles();
   const orAccount = useOpenRouterAccount();
   const settings = useSettings();
   const enabled = useMemo(() => (profiles ?? []).filter((p) => p.enabled), [profiles]);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachErr, setAttachErr] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -45,6 +47,13 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
   const [sel, setSel] = useState(0);
   const ta = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  // When mounted with pre-filled text (e.g. QuoteDialog's "@gpt ") and autoFocus, place the caret at the end.
+  useEffect(() => {
+    if (!autoFocus || !initialText || !ta.current) return;
+    const len = ta.current.value.length;
+    ta.current.setSelectionRange(len, len);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasLocalModel = useMemo(() => enabled.some(isLocalProfile), [enabled]);
   const isLocalLocked = Boolean(forceLocalOnly || localOnly);
@@ -168,7 +177,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
       if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => (s + 1) % matches.length); return; }
       if (e.key === 'ArrowUp') { e.preventDefault(); setSel((s) => (s - 1 + matches.length) % matches.length); return; }
       if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pick(matches[sel].handle); return; }
-      if (e.key === 'Escape') { e.stopPropagation(); setMenu(null); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setMenu(null); return; }
     }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void send(); }
   }
@@ -317,10 +326,10 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
             style={{ fieldSizing: 'content', minHeight: compact ? 42 : 54 } as React.CSSProperties}
           />
 
-          {!parentId && pool.length > 0 && (
+          {pool.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
               {pool.slice(0, 10).map((p) => {
-                const on = mentioned.includes(p.handle);
+                const on = mentioned.includes(p.handle) || (mentioned.length === 0 && effectiveImplicit === p.handle);
                 const local = isLocalProfile(p);
                 return (
                   <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId} (${local ? t('route.local') : t('route.cloud')})`}

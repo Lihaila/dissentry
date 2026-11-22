@@ -91,6 +91,9 @@ export const en = {
   'sev.major': 'major',
   'sev.critical': 'critical',
 
+  'reply.title': 'Reply',
+  'reply.replyingTo': 'Replying to @{handle}',
+  'quote.title': 'Quote in new thread',
   'quote.hint': 'Quote with a note, then @mention who should respond',
   'quote.placeholder': 'Add a note, e.g. “@{handle} is this right?”',
   'quote.placeholderPlain': 'Add a note…',

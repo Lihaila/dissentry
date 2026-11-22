@@ -93,6 +93,9 @@ export const zh: Dict = {
   'sev.major': '重要',
   'sev.critical': '严重',
 
+  'reply.title': '回复',
+  'reply.replyingTo': '回复 @{handle}',
+  'quote.title': '引用并开新话题',
   'quote.hint': '加一句评论引用它，再@应该回应的模型',
   'quote.placeholder': '加一句评论，例如“@{handle} 这样对吗？”',
   'quote.placeholderPlain': '加一句评论……',

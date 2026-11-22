@@ -93,6 +93,9 @@ export const ko: Dict = {
   'sev.major': '중요',
   'sev.critical': '심각',
 
+  'reply.title': '답글',
+  'reply.replyingTo': '@{handle}님에게 답글',
+  'quote.title': '인용하여 새 스레드 시작',
   'quote.hint': '코멘트를 달아 인용하고, 응답할 모델을 @로 지정하세요',
   'quote.placeholder': '코멘트 추가 (예: "@{handle} 이거 맞아?")',
   'quote.placeholderPlain': '코멘트 추가…',

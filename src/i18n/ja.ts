@@ -93,6 +93,9 @@ export const ja: Dict = {
   'sev.major': '重要',
   'sev.critical': '重大',
 
+  'reply.title': '返信',
+  'reply.replyingTo': '@{handle} への返信',
+  'quote.title': '引用して新しいスレッドを作成',
   'quote.hint': 'コメントを付けて引用し、返答してほしいモデルを@で指定',
   'quote.placeholder': 'コメントを追加（例：「@{handle} これは正しい？」）',
   'quote.placeholderPlain': 'コメントを追加…',
