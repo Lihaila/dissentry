@@ -55,7 +55,7 @@ export function PostCard({ post, profiles, lineBelow, focused, onReply }: Props)
   return (
     <article
       onClick={(e) => { if (!(e.target as HTMLElement).closest('a,button,pre,.code-block,input,textarea,[data-no-open]') && !window.getSelection()?.toString()) open(); }}
-      className={`relative flex gap-3 px-4 pt-3.5 ${lineBelow ? 'pb-0.5' : 'pb-2.5'} ${focused ? 'pb-3 pt-4' : 'cursor-pointer transition-colors hover:bg-slate-50/70'}`}
+      className={`relative flex gap-3 px-3.5 pt-3.5 sm:px-4 ${lineBelow ? 'pb-0.5' : 'pb-2.5'} ${focused ? 'pb-3 pt-4' : 'cursor-pointer transition-colors hover:bg-slate-50/70'}`}
     >
       <div className="flex flex-col items-center">
         <Avatar profile={profile} user={isUser ? displayName(settings, t('post.youName')) : undefined} />

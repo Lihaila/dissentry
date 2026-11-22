@@ -1,14 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowLeft, BarChart3, Bot, Check, Code2, Home, PenSquare, Plus, Settings, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, BarChart3, Bot, Check, Code2, Home, PanelLeft, PenSquare, Plus, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { db } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
-import { openNewThread, threadTitle } from '../lib/ui';
+import { closeThreadsDrawer, openNewThread, openThreadsDrawer, threadTitle, useThreadsDrawerOpen } from '../lib/ui';
 import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
 import { profileKind } from '../lib/providers';
 import { deletePostTree } from '../lib/store';
+import { timeAgo } from '../lib/time';
 import { Avatar } from './Avatar';
 import { ConfirmHost } from './ConfirmHost';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -93,7 +94,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       <main className="min-h-screen w-full max-w-[660px] flex-1 border-slate-200/80 bg-white pb-24 shadow-xs shadow-slate-900/[0.02] md:border-x md:pb-12">
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 py-2.5 backdrop-blur-md md:hidden">
+        <div className="sticky top-0 z-20 flex h-12 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-md md:hidden">
           <div className="flex items-center gap-2">
             <LihaiLaBrandLink compact />
             <span aria-hidden className="h-3.5 w-px bg-slate-200" />
@@ -117,6 +118,7 @@ export function Layout({ children }: { children: ReactNode }) {
         className="fixed bottom-20 right-5 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-ink text-white shadow-lg shadow-slate-900/25 transition active:scale-95 md:hidden">
         <Plus size={24} />
       </button>
+      <MobileThreadsDrawer />
       <NewThreadDialog />
       <ConfirmHost />
     </div>
@@ -230,20 +232,151 @@ function RightPanel() {
   );
 }
 
+function MobileThreadsDrawer() {
+  const t = useT();
+  const open = useThreadsDrawerOpen();
+  const [loc, navigate] = useLocation();
+  const roots = useLiveQuery(() => db.posts.orderBy('createdAt').reverse().filter((p) => !p.parentId).limit(30).toArray(), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeThreadsDrawer(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  async function remove(id: string) {
+    if (!(await confirmAction({ title: t('post.deleteThreadTitle'), body: t('post.deleteBody'), confirmLabel: t('post.delete'), danger: true }))) return;
+    const deleted = await deletePostTree(id);
+    const curId = loc.startsWith('/post/') ? loc.slice('/post/'.length) : null;
+    if (curId && deleted.includes(curId)) navigate('/');
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('layout.recent')}
+      onClick={closeThreadsDrawer}
+      className="animate-backdrop fixed inset-0 z-40 flex bg-slate-950/35 backdrop-blur-[2px] md:hidden"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex h-full w-[min(320px,84vw)] flex-col border-r border-slate-200/80 bg-white shadow-2xl"
+      >
+        <div className="flex h-12 items-center justify-between border-b border-slate-200/80 px-4">
+          <span className="text-[15px] font-bold tracking-tight text-ink">{t('layout.recent')}</span>
+          <button
+            type="button"
+            onClick={closeThreadsDrawer}
+            aria-label={t('common.close')}
+            className="-mr-1.5 flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="border-b border-slate-100 p-3">
+          <button
+            type="button"
+            onClick={openNewThread}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[.98]"
+          >
+            <PenSquare size={16} />
+            <span>{t('nav.newThread')}</span>
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          <Link
+            href="/"
+            onClick={closeThreadsDrawer}
+            className={`mb-1 flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13.5px] transition ${
+              loc === '/' ? 'bg-slate-100 font-semibold text-ink' : 'text-slate-600 hover:bg-slate-50 hover:text-ink'
+            }`}
+          >
+            <Home size={15} className="shrink-0" />
+            <span>{t('layout.allThreads')}</span>
+          </Link>
+
+          {!roots?.length ? (
+            <p className="px-3 py-6 text-center text-[13px] text-slate-400">{t('layout.noThreads')}</p>
+          ) : (
+            <div className="space-y-0.5">
+              {roots.map((r) => {
+                const isActive = loc === `/post/${r.id}`;
+                return (
+                  <div
+                    key={r.id}
+                    className={`flex items-center rounded-xl transition ${
+                      isActive ? 'bg-slate-200/70 font-medium text-ink' : 'text-slate-700 hover:bg-slate-100/80'
+                    }`}
+                  >
+                    <Link
+                      href={`/post/${r.id}`}
+                      onClick={closeThreadsDrawer}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-[13.5px]"
+                    >
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isActive ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                      <span className="min-w-0 flex-1 truncate">{threadTitle(r.text, 48, r.attachments?.[0]?.name)}</span>
+                      <span className="shrink-0 text-[11px] text-slate-400">{timeAgo(r.createdAt)}</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => void remove(r.id)}
+                      aria-label={t('post.deleteThreadTitle')}
+                      title={t('post.deleteThreadTitle')}
+                      className="mr-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PageHeader({ title, sub, back }: { title: string; sub?: string; back?: boolean }) {
   const t = useT();
+  const threadCount = useLiveQuery(() => db.posts.filter((p) => !p.parentId).count(), []) ?? 0;
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur-md max-md:top-[49px]">
+    <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur-md max-md:top-12">
       {back && (
         <button onClick={() => (history.length > 1 ? history.back() : (location.href = '/'))} aria-label={t('common.back')}
           className="-ml-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-ink">
           <ArrowLeft size={18} />
         </button>
       )}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <h1 className="truncate text-[18px] font-bold leading-tight tracking-tight text-ink">{title}</h1>
         {sub && <p className="truncate text-[12.5px] text-slate-500">{sub}</p>}
       </div>
+      {threadCount > 0 && (
+        <button
+          type="button"
+          onClick={openThreadsDrawer}
+          aria-label={t('layout.recent')}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-2.5 py-1.5 text-[12.5px] font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 active:scale-95 md:hidden"
+        >
+          <PanelLeft size={14} className="text-slate-500" />
+          <span>{t('layout.threads')}</span>
+          <span className="rounded-full bg-slate-100 px-1.5 py-px text-[11px] tabular-nums text-slate-500">
+            {threadCount}
+          </span>
+        </button>
+      )}
     </header>
   );
 }

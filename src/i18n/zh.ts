@@ -20,6 +20,9 @@ export const zh: Dict = {
   'layout.localFirst': '本地优先：你的帖子和密钥只保存在这个浏览器里。',
   'layout.openSource': '开源（MIT）',
   'layout.recent': '最近的话题',
+  'layout.threads': '话题',
+  'layout.allThreads': '全部话题',
+  'layout.noThreads': '还没有话题。',
 
   'panel.yourModels': '你的模型',
   'panel.manage': '管理',

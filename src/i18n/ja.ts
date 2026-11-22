@@ -20,6 +20,9 @@ export const ja: Dict = {
   'layout.localFirst': 'ローカルファースト：投稿とキーはこのブラウザ内だけに保存されます。',
   'layout.openSource': 'オープンソース（MIT）',
   'layout.recent': '最近のスレッド',
+  'layout.threads': 'スレッド',
+  'layout.allThreads': 'すべてのスレッド',
+  'layout.noThreads': 'まだスレッドがありません。',
 
   'panel.yourModels': 'あなたのモデル',
   'panel.manage': '管理',

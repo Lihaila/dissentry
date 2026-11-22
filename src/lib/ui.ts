@@ -1,12 +1,19 @@
 import { useSyncExternalStore } from 'react';
 
-// Tiny global UI state: whether the "new thread" composer is open.
+// Tiny global UI state: "new thread" composer modal and mobile "recent threads" drawer.
 let newThreadOpen = false;
+let threadsDrawerOpen = false;
 const listeners = new Set<() => void>();
-export function openNewThread() { newThreadOpen = true; listeners.forEach((l) => l()); }
-export function closeNewThread() { newThreadOpen = false; listeners.forEach((l) => l()); }
+const notify = () => listeners.forEach((l) => l());
+export function openNewThread() { newThreadOpen = true; threadsDrawerOpen = false; notify(); }
+export function closeNewThread() { newThreadOpen = false; notify(); }
 export const useNewThreadOpen = () =>
   useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => newThreadOpen);
+
+export function openThreadsDrawer() { threadsDrawerOpen = true; notify(); }
+export function closeThreadsDrawer() { threadsDrawerOpen = false; notify(); }
+export const useThreadsDrawerOpen = () =>
+  useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => threadsDrawerOpen);
 
 /** First line of a post, for thread titles. */
 export function threadTitle(text: string, max = 60, fallback?: string): string {

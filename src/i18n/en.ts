@@ -18,6 +18,9 @@ export const en = {
   'layout.localFirst': 'Local-first: your posts and keys stay in this browser.',
   'layout.openSource': 'Open source (MIT)',
   'layout.recent': 'Recent threads',
+  'layout.threads': 'Threads',
+  'layout.allThreads': 'All threads',
+  'layout.noThreads': 'No threads yet.',
 
   'panel.yourModels': 'Your models',
   'panel.manage': 'Manage',

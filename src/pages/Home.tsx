@@ -35,12 +35,19 @@ export function HomePage() {
         <div className="border-b border-slate-200/80"><Composer /></div>
       )}
       {roots?.length === 0 && profiles.size > 0 && <Tips />}
-      {roots?.map(({ post, replies }) => (
-        <div key={post.id} className="border-b border-slate-200/80">
-          <PostCard post={post} profiles={profiles} lineBelow={replies.length > 0} />
-          {replies.map((r, i) => <PostCard key={r.id} post={r} profiles={profiles} lineBelow={i < replies.length - 1} />)}
+      {roots && roots.length > 0 && (
+        <div className="space-y-3 bg-slate-100/80 px-2.5 py-3 md:space-y-0 md:bg-transparent md:p-0">
+          {roots.map(({ post, replies }) => (
+            <section
+              key={post.id}
+              className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xs md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:border-slate-200/80 md:shadow-none"
+            >
+              <PostCard post={post} profiles={profiles} lineBelow={replies.length > 0} />
+              {replies.map((r, i) => <PostCard key={r.id} post={r} profiles={profiles} lineBelow={i < replies.length - 1} />)}
+            </section>
+          ))}
         </div>
-      ))}
+      )}
       {roots && roots.length >= limit && (
         <button onClick={() => setLimit((l) => l + PAGE)} className="w-full py-4 text-[14px] font-medium text-sky-600 hover:bg-slate-50">{t('home.more')}</button>
       )}

@@ -20,6 +20,9 @@ export const ko: Dict = {
   'layout.localFirst': '로컬 우선: 게시물과 키는 이 브라우저에만 저장됩니다.',
   'layout.openSource': '오픈소스 (MIT)',
   'layout.recent': '최근 스레드',
+  'layout.threads': '스레드',
+  'layout.allThreads': '전체 스레드',
+  'layout.noThreads': '아직 스레드가 없습니다.',
 
   'panel.yourModels': '내 모델',
   'panel.manage': '관리',

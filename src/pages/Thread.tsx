@@ -41,7 +41,7 @@ export function ThreadPage({ id }: { id: string }) {
     <>
       <PageHeader title={threadTitle(root.text, 50, root.attachments?.[0]?.name)} sub={threadLocal ? `${t('thread.title')} · ${t('route.localOnly')}` : t('thread.title')} back />
       {ancestors.map((a) => <PostCard key={a.id} post={a} profiles={profiles} lineBelow />)}
-      <div ref={focusRef} className="scroll-mt-16">
+      <div ref={focusRef} className="scroll-mt-28 md:scroll-mt-16">
         <PostCard post={post} profiles={profiles} focused onReply={() => setReplyOpen(true)} />
       </div>
       {quotes > 0 && <p className="border-t border-slate-100 px-4 py-2 text-[13px] text-slate-500">{t('thread.quoted', { n: quotes })}</p>}
