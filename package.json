@@ -1,6 +1,6 @@
 {
   "name": "dissentry",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "description": "Community Notes for AI answers. Ask one model, let the others dissent — with Web Search, DeepThink, shared thread memory, file/image attachments, and image/audio/video generation. Local-first, bring your own keys.",
   "scripts": {
     "dev": "vite",
