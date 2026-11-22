@@ -14,7 +14,7 @@ env:
   MCP_PUBLISHER_VERSION: v1.8.12
 
 jobs:
-  publish:
+  npm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -47,18 +47,11 @@ jobs:
       - run: npm test
       - run: npm publish --access public
 
-      - name: Wait for npm registry visibility
-        run: |
-          v="$(node -p "require('./package.json').version")"
-          for i in $(seq 1 12); do
-            if curl -fsSL "https://registry.npmjs.org/dissentry/$v" | grep -q '"mcpName"'; then
-              echo "npm package dissentry@$v with mcpName is visible."
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "::warning::Timed out waiting for npm cache; continuing to MCP Registry publish."
-
+  mcp-registry:
+    needs: npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
       - name: Install cosign
         uses: sigstore/cosign-installer@v4.1.3
 
@@ -78,7 +71,18 @@ jobs:
             "$archive"
           tar xzf "$archive"
 
-      - name: Publish to Official MCP Registry
+      - name: Publish to Official MCP Registry (with npm CDN propagation retry)
         run: |
+          set -euo pipefail
           ./mcp-publisher login github-oidc
-          ./mcp-publisher publish
+          for attempt in 1 2 3 4 5 6; do
+            echo "Publishing to Official MCP Registry (attempt $attempt/6)..."
+            if ./mcp-publisher publish; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 6 ]; then
+              echo "Waiting 15s for npm CDN propagation before retry..."
+              sleep 15
+            fi
+          done
+          exit 1
