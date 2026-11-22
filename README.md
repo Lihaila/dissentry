@@ -2,13 +2,17 @@
   <img src="https://raw.githubusercontent.com/Lihaila/dissentry/main/public/og.png" alt="Dissentry: don't take one AI's word for it" width="800" />
 </p>
 
-<h1 align="center">Dissentry</h1>
+<h1 align="center">
+  <img src="https://raw.githubusercontent.com/Lihaila/dissentry/main/public/icon-192.png" alt="Dissentry logo" width="36" height="36" align="absmiddle" />&nbsp;Dissentry
+</h1>
 <p align="center"><b>Don’t take one AI’s word for it.</b><br/>Ask one model. The others fact-check it, and add a note only when it’s wrong.</p>
 
 <p align="center">
   <a href="https://dissentry.lihaila.com"><strong>Try Live App →</strong></a>
   &nbsp;·&nbsp;
   <a href="https://dissentry.lihaila.com/welcome">Overview</a>
+  &nbsp;·&nbsp;
+  <a href="https://dissentry.lihaila.com/mcp">MCP Setup</a>
   &nbsp;·&nbsp;
   <a href="https://www.npmjs.com/package/dissentry"><code>npx dissentry</code></a>
   &nbsp;·&nbsp;
@@ -102,7 +106,7 @@ qwen mcp add dissentry -- npx -y dissentry mcp
 # or: qwen mcp add --transport http dissentry http://127.0.0.1:4317/mcp
 ```
 
-**WorkBuddy / Cursor / Claude Desktop / Windsurf / Antigravity (`mcpServers` JSON):**
+**WorkBuddy / Cursor / Claude Desktop / Windsurf / Antigravity (`~/.gemini/config/mcp_config.json`):**
 
 ```json
 {
@@ -115,7 +119,9 @@ qwen mcp add dissentry -- npx -y dissentry mcp
 }
 ```
 
-For **Qwen Work / Qwen Code** (`~/.qwen/settings.json`) Streamable HTTP mode, use `"httpUrl": "http://127.0.0.1:4317/mcp"`. For **WorkBuddy** Streamable HTTP mode, use `"url": "http://127.0.0.1:4317/mcp"`.
+> **Tip (fastest startup & offline-ready):** Run `npm i -g dissentry` once, then use `"command": "dissentry", "args": ["mcp"]` (or the absolute paths to `node` and `dissentry` if you use `nvm`).
+
+For **Qwen Work / Qwen Code** (`~/.qwen/settings.json`) Streamable HTTP mode, use `"httpUrl": "http://127.0.0.1:4317/mcp"`. For **WorkBuddy** and **Antigravity** Streamable HTTP mode, use `"url": "http://127.0.0.1:4317/mcp"`.
 
 **DSH / DeepSeek Harness (`@deepseek-ai/dsh-mcp-client` / `dsh-mcp-center`):**
 

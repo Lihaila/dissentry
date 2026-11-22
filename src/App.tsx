@@ -28,12 +28,14 @@ export function App() {
   );
   const isPrivacy = loc === '/privacy';
   const isTerms = loc === '/terms';
-  const isLanding = loc === '/welcome' || (loc === '/' && fresh && !started);
+  const isMcp = loc === '/mcp';
+  const isLanding = loc === '/welcome' || isMcp || (loc === '/' && fresh && !started);
 
   useEffect(() => {
     const suffix = 'Dissentry · Lihai La';
     const title = isPrivacy ? `${t('footer.privacy')} · ${suffix}`
       : isTerms ? `${t('footer.terms')} · ${suffix}`
+      : isMcp ? `MCP · ${suffix}`
       : isLanding ? `Dissentry — ${t('land.h1')} | Lihai La`
       : loc.startsWith('/models') ? `${t('models.title')} · ${suffix}`
       : loc.startsWith('/trust') ? `${t('trust.title')} · ${suffix}`
@@ -42,11 +44,11 @@ export function App() {
       : loc.startsWith('/post/') ? `${t('thread.title')} · ${suffix}`
       : `${t('home.title')} · ${suffix}`;
     document.title = title;
-  }, [loc, lang, isLanding, isPrivacy, isTerms, t]);
+  }, [loc, lang, isLanding, isMcp, isPrivacy, isTerms, t]);
 
   if (isPrivacy) return <PrivacyPage />;
   if (isTerms) return <TermsPage />;
-  if (isLanding) return <LandingPage />;
+  if (isLanding) return <LandingPage initialSection={isMcp ? 'mcp' : undefined} />;
   if (loc === '/' && fresh === undefined) return null; // avoid flashing the app before we know
   return (
     <Layout>

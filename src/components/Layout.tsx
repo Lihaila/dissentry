@@ -84,6 +84,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px] text-slate-400">
             <a href={lihailaUrl(lang)} className="font-medium text-slate-500 transition hover:text-ink">Lihai La</a>
             <Link href="/welcome" className="transition hover:text-slate-700">{t('layout.about')}</Link>
+            <Link href="/mcp" className="transition hover:text-slate-700">MCP</Link>
             <Link href="/privacy" className="transition hover:text-slate-700">{t('footer.privacy')}</Link>
             <Link href="/terms" className="transition hover:text-slate-700">{t('footer.terms')}</Link>
             <a className="inline-flex items-center gap-1 transition hover:text-slate-700" href="https://github.com/Lihaila/dissentry" target="_blank" rel="noopener noreferrer">

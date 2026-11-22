@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, Check, Code2, Coins, Copy, Globe2, ImageDown, Layers, Lock, Play, Sparkles, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BadgeCheck, Check, Code2, Coins, Copy, Globe2, ImageDown, Layers, Lock, Play, Plug, Sparkles, Terminal, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -22,6 +22,79 @@ const FEATURES: { icon: typeof Sparkles; title: TKey; body: TKey }[] = [
   { icon: Coins, title: 'land.f6t', body: 'land.f6b' },
 ];
 
+const MCP_TOOLS: { name: string; desc: TKey }[] = [
+  { name: 'dissentry_check', desc: 'land.mcpToolCheck' },
+  { name: 'dissentry_ask', desc: 'land.mcpToolAsk' },
+  { name: 'dissentry_list_models', desc: 'land.mcpToolList' },
+  { name: 'dissentry_trust', desc: 'land.mcpToolTrust' },
+];
+
+type McpTabId = 'claude' | 'json' | 'qwen' | 'dsh' | 'http';
+
+const MCP_TABS: { id: McpTabId; label: string | TKey; isKey?: boolean; hint: TKey; code: string }[] = [
+  {
+    id: 'json',
+    label: 'Cursor / Antigravity / WorkBuddy',
+    hint: 'land.mcpHintJson',
+    code: `{
+  "mcpServers": {
+    "dissentry": {
+      "command": "npx",
+      "args": ["-y", "dissentry", "mcp"]
+    }
+  }
+}`,
+  },
+  {
+    id: 'claude',
+    label: 'Claude Code',
+    hint: 'land.mcpHintClaude',
+    code: `# Add via stdio (zero daemon required)
+claude mcp add dissentry -- npx -y dissentry mcp
+
+# Optional: lock checks strictly to local Ollama / LM Studio
+claude mcp add dissentry -- npx -y dissentry mcp --local-only`,
+  },
+  {
+    id: 'qwen',
+    label: 'Qwen Work',
+    hint: 'land.mcpHintQwen',
+    code: `# Stdio
+qwen mcp add dissentry -- npx -y dissentry mcp
+
+# Or Streamable HTTP (while \`npx dissentry\` is running)
+qwen mcp add --transport http dissentry http://127.0.0.1:4317/mcp`,
+  },
+  {
+    id: 'dsh',
+    label: 'DSH',
+    hint: 'land.mcpHintDsh',
+    code: `- id: mcp-dissentry
+  name: '@deepseek-ai/dsh-mcp-client'
+  config:
+    serverName: dissentry
+    transport: stdio
+    command: npx
+    args:
+      - '-y'
+      - 'dissentry'
+      - 'mcp'`,
+  },
+  {
+    id: 'http',
+    label: 'land.mcpTabHttp',
+    isKey: true,
+    hint: 'land.mcpHintHttp',
+    code: `# Exposed automatically at http://127.0.0.1:4317/mcp
+npx dissentry
+
+# Or run headless Streamable HTTP (default :4318/mcp)
+npx -y dissentry mcp --http
+
+# Client config: "url": "http://127.0.0.1:4317/mcp" (Qwen: "httpUrl")`,
+  },
+];
+
 const FAQ: [TKey, TKey][] = [
   ['land.q1', 'land.a1'],
   ['land.q2', 'land.a2'],
@@ -37,14 +110,27 @@ const PROMO_VIDEO_URL =
     ? '/promo.mp4'
     : 'https://dissentry.lihaila.com/promo.mp4';
 
-export function LandingPage() {
+export function LandingPage({ initialSection }: { initialSection?: string } = {}) {
   const t = useT();
   const lang = useLang();
   const orAccount = useOpenRouterAccount();
   const profiles = useProfiles();
   const isReady = Boolean(orAccount) || (profiles?.length ?? 0) > 0;
   const [copiedCmd, setCopiedCmd] = useState(false);
+  const [mcpTab, setMcpTab] = useState<McpTabId>('json');
+  const [copiedMcp, setCopiedMcp] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
+
+  const activeMcp = MCP_TABS.find((tab) => tab.id === mcpTab) ?? MCP_TABS[0];
+
+  useEffect(() => {
+    const targetId = initialSection || (typeof window !== 'undefined' && window.location.hash ? window.location.hash.slice(1) : '');
+    if (!targetId) return;
+    const id = window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [initialSection]);
 
   useEffect(() => {
     if (!videoOpen) return;
@@ -71,10 +157,11 @@ export function LandingPage() {
             <Link href="/welcome" className="shrink-0"><Logo size={25} /></Link>
           </div>
           <nav aria-label="Primary" className="ml-4 hidden items-center gap-5 text-[14px] font-medium text-slate-600 lg:flex">
-            <a href="#how" className="transition hover:text-ink">{t('land.navHow')}</a>
-            <a href="#features" className="transition hover:text-ink">{t('land.navFeatures')}</a>
-            <a href="#faq" className="transition hover:text-ink">{t('land.navFaq')}</a>
-            <a href="https://github.com/Lihaila/dissentry" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 transition hover:text-ink"><Code2 size={15} />GitHub</a>
+            <a href="#how" className="whitespace-nowrap transition hover:text-ink">{t('land.navHow')}</a>
+            <a href="#features" className="whitespace-nowrap transition hover:text-ink">{t('land.navFeatures')}</a>
+            <a href="#faq" className="whitespace-nowrap transition hover:text-ink">{t('land.navFaq')}</a>
+            <a href="https://github.com/Lihaila/dissentry" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 whitespace-nowrap transition hover:text-ink"><Code2 size={15} />GitHub</a>
+            <a href="#mcp" className="flex items-center gap-1 whitespace-nowrap transition hover:text-ink"><Plug size={15} />MCP</a>
           </nav>
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <LanguageSwitcher compact />
@@ -202,6 +289,120 @@ export function LandingPage() {
             </div>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-[13px] text-slate-500">
               <Globe2 size={15} /> English · 简体中文 · 日本語 · 한국어
+            </div>
+          </div>
+        </section>
+
+        {/* MCP Server */}
+        <section id="mcp" className="scroll-mt-20 border-y border-slate-200/70 bg-slate-50/70">
+          <div className="mx-auto max-w-6xl px-5 py-20">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/90 bg-white px-3 py-1 text-[12.5px] font-semibold text-amber-800 shadow-2xs">
+                <Plug size={13} />
+                {t('land.mcpBadge')}
+              </span>
+              <h2 className="mt-4 text-balance text-[32px] font-extrabold tracking-tight text-ink sm:text-[36px]">
+                {t('land.mcpTitle')}
+              </h2>
+              <p className="mt-3 text-pretty text-[16px] leading-relaxed text-slate-600">
+                {t('land.mcpSub')}
+              </p>
+            </div>
+
+            <div className="mt-10 grid items-start gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+              <div className="space-y-5">
+                <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                  <h3 className="text-[17px] font-bold text-ink">{t('land.mcpSetupTitle')}</h3>
+                  <ol className="mt-4 space-y-3.5 text-[14.5px] leading-relaxed text-slate-600">
+                    <li className="flex gap-3">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[12px] font-bold text-white">1</span>
+                      <span>{t('land.mcpStep1')}</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[12px] font-bold text-white">2</span>
+                      <span>{t('land.mcpStep2')}</span>
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs">
+                  <h3 className="text-[17px] font-bold text-ink">{t('land.mcpToolsTitle')}</h3>
+                  <ul className="mt-3.5 space-y-3">
+                    {MCP_TOOLS.map(({ name, desc }) => (
+                      <li key={name} className="text-[14px] leading-relaxed text-slate-600">
+                        <code className="rounded-md bg-amber-50 px-1.5 py-0.5 font-mono text-[12.5px] font-semibold text-amber-900 ring-1 ring-amber-200/80">
+                          {name}
+                        </code>
+                        <p className="mt-1">{t(desc)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="min-w-0 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xs sm:p-6">
+                <div role="tablist" aria-label="MCP Clients" className="flex flex-wrap gap-1.5">
+                  {MCP_TABS.map((tab) => {
+                    const active = tab.id === activeMcp.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => { setMcpTab(tab.id); setCopiedMcp(false); }}
+                        className={`rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition ${
+                          active
+                            ? 'bg-ink text-white shadow-2xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-ink'
+                        }`}
+                      >
+                        {tab.isKey ? t(tab.label as TKey) : tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-2xl bg-slate-950 text-slate-100 ring-1 ring-slate-900/10">
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5">
+                    <span className="flex min-w-0 items-center gap-2 text-[12px] text-slate-300">
+                      <Terminal size={13} className="shrink-0 text-amber-400" />
+                      <span className="truncate">{t(activeMcp.hint)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(activeMcp.code);
+                        setCopiedMcp(true);
+                        setTimeout(() => setCopiedMcp(false), 1500);
+                      }}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 text-[12px] font-medium text-white transition hover:bg-white/20 active:scale-[.98]"
+                    >
+                      {copiedMcp ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                      <span>{copiedMcp ? t('post.copied') : t('post.copy')}</span>
+                    </button>
+                  </div>
+                  <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-slate-100">
+                    <code>{activeMcp.code}</code>
+                  </pre>
+                </div>
+
+                <p className="mt-4 rounded-2xl border border-amber-200/70 bg-amber-50/70 px-4 py-3 text-[13px] leading-relaxed text-slate-700">
+                  {t('land.mcpTipGlobal')}
+                </p>
+
+                <div className="mt-4 flex justify-end">
+                  <a
+                    href="https://github.com/Lihaila/dissentry#mcp-server-claude-code-cursor-dsh-workbuddy-qwen-work-antigravity"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink transition hover:text-amber-700"
+                  >
+                    <span>{t('land.mcpDocsLink')}</span>
+                    <ArrowUpRight size={15} />
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </section>
