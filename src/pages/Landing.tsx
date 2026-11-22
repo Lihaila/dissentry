@@ -6,7 +6,9 @@ import { LihaiLaBrandLink, LihaiLaFooter, lihailaUrl } from '../components/Lihai
 import { Logo } from '../components/Logo';
 import { OpenRouterButton } from '../components/OpenRouterButton';
 import { useLang, useT, type TKey } from '../i18n';
+import { useProfiles } from '../lib/hooks';
 import { presetLogo } from '../lib/logos';
+import { useOpenRouterAccount } from '../lib/openrouter';
 import { markStarted } from '../lib/started';
 
 const PROVIDERS = ['openai', 'anthropic', 'google', 'deepseek', 'qwen', 'xai', 'mistral', 'groq', 'openrouter', 'ollama'];
@@ -38,6 +40,9 @@ const PROMO_VIDEO_URL =
 export function LandingPage() {
   const t = useT();
   const lang = useLang();
+  const orAccount = useOpenRouterAccount();
+  const profiles = useProfiles();
+  const isReady = Boolean(orAccount) || (profiles?.length ?? 0) > 0;
   const [copiedCmd, setCopiedCmd] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
 
@@ -104,10 +109,29 @@ export function LandingPage() {
               <h1 className="mt-5 text-balance text-[42px] font-extrabold leading-[1.06] tracking-tight text-ink sm:text-[54px]">{t('land.h1')}</h1>
               <p className="mt-5 max-w-xl text-pretty text-[17.5px] leading-relaxed text-slate-600">{t('land.sub')}</p>
               <div className="mt-7 flex flex-wrap items-center gap-3">
-                <span onClick={markStarted}><OpenRouterButton size="lg" /></span>
-                <Link href="/models" onClick={markStarted} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300/90 bg-white/85 px-5 py-3 text-[15px] font-semibold text-ink shadow-2xs transition hover:border-slate-400 hover:bg-white active:scale-[.98]">
-                  {t('land.ctaKeys')} <ArrowRight size={16} />
-                </Link>
+                {isReady ? (
+                  <>
+                    <Link href="/" onClick={markStarted} className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3 text-[15px] font-semibold text-white shadow-sm shadow-slate-900/10 transition hover:bg-slate-800 active:scale-[.98]">
+                      {t('land.openApp')} <ArrowRight size={16} />
+                    </Link>
+                    {orAccount ? (
+                      <Link href="/models" onClick={markStarted} className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/90 bg-emerald-50/90 px-4 py-3 text-[14.5px] font-semibold text-emerald-800 shadow-2xs transition hover:border-emerald-300 hover:bg-emerald-50 active:scale-[.98]">
+                        <Check size={15} strokeWidth={2.8} /> OpenRouter · {t('or.connectedBadge')}
+                      </Link>
+                    ) : (
+                      <Link href="/models" onClick={markStarted} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300/90 bg-white/85 px-5 py-3 text-[15px] font-semibold text-ink shadow-2xs transition hover:border-slate-400 hover:bg-white active:scale-[.98]">
+                        {t('nav.models')} <ArrowRight size={16} />
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span onClick={markStarted}><OpenRouterButton size="lg" /></span>
+                    <Link href="/models" onClick={markStarted} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300/90 bg-white/85 px-5 py-3 text-[15px] font-semibold text-ink shadow-2xs transition hover:border-slate-400 hover:bg-white active:scale-[.98]">
+                      {t('land.ctaKeys')} <ArrowRight size={16} />
+                    </Link>
+                  </>
+                )}
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <button
@@ -203,7 +227,13 @@ export function LandingPage() {
             <h2 className="text-balance text-[32px] font-extrabold tracking-tight text-ink sm:text-[40px]">{t('land.ctaTitle')}</h2>
             <p className="mx-auto mt-3 max-w-xl text-[16px] text-slate-700">{t('land.ctaSub')}</p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <span onClick={markStarted}><OpenRouterButton size="lg" /></span>
+              {isReady ? (
+                <Link href="/" onClick={markStarted} className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3 text-[15px] font-semibold text-white shadow-sm shadow-slate-900/10 transition hover:bg-slate-800 active:scale-[.98]">
+                  {t('land.openApp')} <ArrowRight size={16} />
+                </Link>
+              ) : (
+                <span onClick={markStarted}><OpenRouterButton size="lg" /></span>
+              )}
               <button
                 type="button"
                 onClick={() => { void navigator.clipboard.writeText('npx dissentry'); setCopiedCmd(true); setTimeout(() => setCopiedCmd(false), 1400); }}

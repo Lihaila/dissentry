@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { db } from './db';
+import { OPENROUTER_ACCOUNT_KEY } from './openrouter';
 import { getDiskStoragePath, hasDiskStorage } from './providers';
 import { subscribeSettings } from './settings';
 import { markStarted } from './started';
@@ -201,12 +202,19 @@ export async function initPersistence(): Promise<void> {
   // 1. Auto-restore from local disk if browser storage was cleared, or seed disk on first upgrade.
   if (diskEnabled) {
     try {
-      const [pCount, postCount] = await Promise.all([db.profiles.count(), db.posts.count()]);
+      const [pCount, postCount, orRec] = await Promise.all([
+        db.profiles.count(),
+        db.posts.count(),
+        db.kv.get(OPENROUTER_ACCOUNT_KEY),
+      ]);
+      const localHasData = pCount > 0 || postCount > 0 || Boolean((orRec?.value as { apiKey?: string } | undefined)?.apiKey);
       const res = await fetch('/api/storage', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        const diskHasData = data?.app === 'dissentry' && ((data.profiles?.length ?? 0) > 0 || (data.posts?.length ?? 0) > 0);
-        if (pCount === 0 && postCount === 0 && diskHasData) {
+        const diskHasData = data?.app === 'dissentry' && (
+          (data.profiles?.length ?? 0) > 0 || (data.posts?.length ?? 0) > 0 || Boolean(data.openrouter?.apiKey)
+        );
+        if (!localHasData && diskHasData) {
           suppressSchedule = true;
           try {
             await importAll(data);
@@ -215,7 +223,7 @@ export async function initPersistence(): Promise<void> {
           } finally {
             suppressSchedule = false;
           }
-        } else if ((pCount > 0 || postCount > 0) && !diskHasData) {
+        } else if (localHasData && !diskHasData) {
           // Existing browser data with no disk snapshot yet: seed ~/.dissentry/data.json right away.
           void syncPersistenceNow();
         } else if (diskHasData) {
@@ -248,6 +256,9 @@ export async function initPersistence(): Promise<void> {
     tbl.hook('updating', trigger);
     tbl.hook('deleting', trigger);
   }
+  db.kv.hook('creating', (primKey) => { if (primKey !== BACKUP_HANDLE_KEY) trigger(); });
+  db.kv.hook('updating', (_mods, primKey) => { if (primKey !== BACKUP_HANDLE_KEY) trigger(); });
+  db.kv.hook('deleting', (primKey) => { if (primKey !== BACKUP_HANDLE_KEY) trigger(); });
   subscribeSettings(trigger);
 
   // 5. Ensure "Clear all data" also wipes ~/.dissentry/data.json so cleared data doesn't resurrect on reload.

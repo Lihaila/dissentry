@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { Composer } from '../components/Composer';
@@ -9,6 +10,7 @@ import { useT } from '../i18n';
 import { db } from '../lib/db';
 import { useProfileMap, useTick } from '../lib/hooks';
 import { presetLogo } from '../lib/logos';
+import { useOpenRouterAccount } from '../lib/openrouter';
 import type { Post } from '../lib/types';
 
 const PAGE = 30;
@@ -50,6 +52,7 @@ const HERO_LOGOS = ['openai', 'anthropic', 'google', 'deepseek', 'qwen', 'xai'];
 
 function Welcome() {
   const t = useT();
+  const orAccount = useOpenRouterAccount();
   return (
     <div className="px-6 pb-12 pt-10 text-center sm:px-10">
       <div className="mx-auto mb-7 flex w-fit -space-x-2.5">
@@ -72,8 +75,21 @@ function Welcome() {
         ))}
       </div>
       <div className="mt-8 flex flex-col items-center gap-3">
-        <OpenRouterButton size="lg" />
-        <p className="max-w-xs text-[12.5px] text-slate-500">{t('or.pitch')}</p>
+        {orAccount ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-800 ring-1 ring-emerald-200/80">
+              <Check size={14} strokeWidth={2.8} /> {t('or.connected')}
+            </span>
+            <Link href="/auth/openrouter" className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3 text-[15px] font-semibold text-white shadow-sm shadow-slate-900/10 transition hover:bg-slate-800 active:scale-[.98]">
+              {t('or.chooseModels')}
+            </Link>
+          </>
+        ) : (
+          <>
+            <OpenRouterButton size="lg" />
+            <p className="max-w-xs text-[12.5px] text-slate-500">{t('or.pitch')}</p>
+          </>
+        )}
         <Link href="/models" className="text-[14px] font-semibold text-slate-600 underline-offset-4 hover:text-ink hover:underline">{t('welcome.cta')}</Link>
       </div>
       <p className="mx-auto mt-4 max-w-sm text-[12.5px] text-slate-400">{t('welcome.privacy')}</p>

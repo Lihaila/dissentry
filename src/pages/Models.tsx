@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { Avatar } from '../components/Avatar';
 import { PageHeader } from '../components/Layout';
-import { OpenRouterButton } from '../components/OpenRouterButton';
+import { OpenRouterAccountCard } from '../components/OpenRouterAccountCard';
 import { useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
 import { db, uid } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
 import { toHandle } from '../lib/mentions';
+import { useOpenRouterAccount } from '../lib/openrouter';
 import { PRESETS, presetById } from '../lib/presets';
 import { detectModelKind, friendlyError, hasProxy, isLocalProfile, languageModel, listModelOptions, profileKind, supportsWebSearch, type ModelOption } from '../lib/providers';
 import type { ModelKind, Profile } from '../lib/types';
@@ -52,13 +53,7 @@ export function ModelsPage() {
           {t('models.hostedNpx')} <code className="rounded bg-white px-1 ring-1 ring-slate-200">npx dissentry</code>
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200/80 bg-gradient-to-r from-indigo-50/70 to-white px-4 py-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-[14.5px] font-semibold text-ink">{t('or.cardTitle')}</p>
-          <p className="text-[12.5px] text-slate-500">{t('or.pitch')}</p>
-        </div>
-        <OpenRouterButton />
-      </div>
+      <OpenRouterAccountCard variant="models" />
       <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3">
         <p className="text-[13px] text-slate-500">{t('models.optionsHint')}</p>
         <button onClick={() => { setEditing(blank('anthropic', (profiles ?? []).map((p) => p.handle))); setIsNew(true); }}
@@ -142,6 +137,7 @@ const KINDS: ModelKind[] = ['chat', 'image', 'audio', 'video'];
 
 function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boolean; taken: string[]; onDone: () => void }) {
   const t = useT();
+  const orAccount = useOpenRouterAccount();
   const [p, setP] = useState<Profile>(value);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [fetching, setFetching] = useState(false);
@@ -188,8 +184,18 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
   function choosePreset(id: string) {
     const pr = presetById(id);
     const fresh = blank(id, taken);
-    setP((cur) => ({ ...cur, presetId: id, protocol: pr.protocol, baseUrl: pr.baseUrl, color: pr.color, modelId: '', kind: 'chat',
-      ...(isNew ? { handle: fresh.handle, name: fresh.name } : {}) }));
+    setP((cur) => ({
+      ...cur,
+      presetId: id,
+      protocol: pr.protocol,
+      baseUrl: pr.baseUrl,
+      color: pr.color,
+      modelId: '',
+      kind: 'chat',
+      ...(isNew ? { handle: fresh.handle, name: fresh.name } : {}),
+      ...(isNew && id === 'openrouter' && orAccount?.apiKey && !cur.apiKey ? { apiKey: orAccount.apiKey } : {}),
+      ...(isNew && id !== 'openrouter' && orAccount?.apiKey && cur.apiKey === orAccount.apiKey ? { apiKey: '' } : {}),
+    }));
     setModels([]);
     setPickerOpen(false);
     setFilter('');

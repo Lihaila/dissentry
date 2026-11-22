@@ -6,6 +6,7 @@ import { submitPost } from '../lib/engine';
 import { FILE_ACCEPT, fmtBytes, MAX_ATTACHMENTS, readAttachments, type FileReject } from '../lib/files';
 import { useProfiles } from '../lib/hooks';
 import { mentionQueryAt, parseMentions } from '../lib/mentions';
+import { useOpenRouterAccount } from '../lib/openrouter';
 import { isLocalProfile, profileKind, profileWebSearchEnabled } from '../lib/providers';
 import { displayName, updateSettings, useSettings } from '../lib/settings';
 import type { Attachment, Profile } from '../lib/types';
@@ -29,6 +30,7 @@ interface Props {
 export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicitHandle, forceLocalOnly, onPosted, compact }: Props) {
   const t = useT();
   const profiles = useProfiles();
+  const orAccount = useOpenRouterAccount();
   const settings = useSettings();
   const enabled = useMemo(() => (profiles ?? []).filter((p) => p.enabled), [profiles]);
   const [text, setText] = useState('');
@@ -175,7 +177,14 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
       <div className="px-5 py-6">
         <p className="text-[14.5px] leading-relaxed text-slate-600">{t('composer.noModels')}</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span onClick={closeNewThread}><OpenRouterButton /></span>
+          {orAccount ? (
+            <Link href="/auth/openrouter" onClick={closeNewThread}
+              className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[13.5px] font-semibold text-white transition hover:bg-slate-800">
+              {t('or.chooseModels')}
+            </Link>
+          ) : (
+            <span onClick={closeNewThread}><OpenRouterButton /></span>
+          )}
           <Link href="/models?add=1" onClick={closeNewThread}
             className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-[13.5px] font-semibold text-ink transition hover:bg-slate-50">
             {t('composer.addFirst')}

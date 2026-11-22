@@ -5,6 +5,7 @@ import { Avatar } from '../components/Avatar';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/Layout';
 import { lihailaUrl } from '../components/LihaiLa';
+import { OpenRouterAccountCard } from '../components/OpenRouterAccountCard';
 import { ProxySettings } from '../components/ProxySettings';
 import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
@@ -135,6 +136,7 @@ export function SettingsPage() {
           </div>
         </div>
       </div>
+      <OpenRouterAccountCard variant="settings" />
       <label className={`${section} flex cursor-pointer items-start gap-3`}>
         <input type="checkbox" className="mt-1 accent-amber-500" checked={s.autoCheck} onChange={(e) => updateSettings({ autoCheck: e.target.checked })} />
         <span><b className="text-[15px] text-ink">{t('settings.autoCheck')}</b><br /><span className="text-[13px] text-slate-500">{t('settings.autoCheckDesc')}</span></span>

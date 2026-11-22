@@ -1,5 +1,6 @@
 // All persistence goes through here, so a sync backend can replace Dexie later without touching the UI.
 import { db } from './db';
+import { OPENROUTER_ACCOUNT_KEY, type OpenRouterAccount } from './openrouter';
 import { getSettings, updateSettings, type Settings } from './settings';
 import { abortAllStreams, abortStream } from './streams';
 import type { Note, Post, Profile } from './types';
@@ -109,6 +110,8 @@ export async function exportAll(includeKeys: boolean) {
       ? { ...post, media: post.media.map(({ blob: _b, ...rest }) => rest) }
       : post,
   );
+  const orRec = includeKeys ? await db.kv.get(OPENROUTER_ACCOUNT_KEY) : undefined;
+  const openrouter = (orRec?.value as OpenRouterAccount | undefined)?.apiKey ? (orRec!.value as OpenRouterAccount) : null;
   const s = getSettings();
   return {
     app: 'dissentry',
@@ -116,6 +119,7 @@ export async function exportAll(includeKeys: boolean) {
     exportedAt: new Date().toISOString(),
     userProfile: { userName: s.userName, userAvatar: s.userAvatar },
     settings: s,
+    openrouter,
     profiles,
     posts,
     notes: await db.notes.toArray(),
@@ -125,11 +129,14 @@ export async function exportAll(includeKeys: boolean) {
 
 export async function importAll(data: Partial<Awaited<ReturnType<typeof exportAll>>>) {
   if (data?.app !== 'dissentry') throw new Error('Not a Dissentry export file');
-  await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, async () => {
+  await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, db.kv, async () => {
     // Keep existing keys when the import has none.
     for (const p of data.profiles ?? []) {
       const existing = await db.profiles.get(p.id);
       await db.profiles.put({ ...p, apiKey: p.apiKey || existing?.apiKey || '' });
+    }
+    if (data.openrouter?.apiKey) {
+      await db.kv.put({ key: OPENROUTER_ACCOUNT_KEY, value: data.openrouter });
     }
     await db.posts.bulkPut(data.posts ?? []);
     await db.notes.bulkPut(data.notes ?? []);
@@ -155,8 +162,14 @@ export async function importAll(data: Partial<Awaited<ReturnType<typeof exportAl
 
 export async function clearAll() {
   abortAllStreams();
-  await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, async () => {
-    await Promise.all([db.profiles.clear(), db.posts.clear(), db.notes.clear(), db.checks.clear()]);
+  await db.transaction('rw', db.profiles, db.posts, db.notes, db.checks, db.kv, async () => {
+    await Promise.all([
+      db.profiles.clear(),
+      db.posts.clear(),
+      db.notes.clear(),
+      db.checks.clear(),
+      db.kv.delete(OPENROUTER_ACCOUNT_KEY),
+    ]);
   });
   await clearHook?.();
 }

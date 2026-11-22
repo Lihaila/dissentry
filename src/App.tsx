@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 import { db } from './lib/db';
+import { getOpenRouterAccount } from './lib/openrouter';
 import { LandingPage } from './pages/Landing';
 import { useStarted } from './lib/started';
 import { useLang, useT } from './i18n';
@@ -21,7 +22,10 @@ export function App() {
   const [loc] = useLocation();
   // First-time visitors (nothing set up yet) see the landing page; returning users go straight to the app.
   const started = useStarted();
-  const fresh = useLiveQuery(async () => (await db.profiles.count()) === 0 && (await db.posts.count()) === 0, []);
+  const fresh = useLiveQuery(
+    async () => (await db.profiles.count()) === 0 && (await db.posts.count()) === 0 && !(await getOpenRouterAccount()),
+    [],
+  );
   const isPrivacy = loc === '/privacy';
   const isTerms = loc === '/terms';
   const isLanding = loc === '/welcome' || (loc === '/' && fresh && !started);
