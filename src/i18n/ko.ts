@@ -351,7 +351,7 @@ export const ko: Dict = {
   "land.mcpToolAsk": "@handle 또는 전체 모델로 다른 모델 계열에 두 번째 의견을 요청합니다.",
   "land.mcpToolList": "설정된 모델, 검증자 역할, 로컬/클라우드 라우팅 상태를 확인합니다.",
   "land.mcpToolTrust": "내 평가를 바탕으로 집계된 모델별 정확도와 검증 통계를 조회합니다.",
-  "land.mcpTipGlobal": "로컬 MCP 빠른 실행: “npm i -g dissentry” 설치 후 command를 \"dissentry\", args를 [\"mcp\"]로 지정하세요(nvm은 절대 경로 권장). 공식 MCP 레지스트리 ID: io.github.Lihaila/dissentry.",
+  "land.mcpTipGlobal": "로컬 MCP 빠른 실행: “npm i -g dissentry” 설치 후 command를 \"dissentry\", args를 [\"mcp\"]로 지정하세요(nvm은 절대 경로 권장). 공식 MCP 레지스트리 ID: com.lihaila/dissentry.",
   "land.mcpDocsLink": "GitHub에서 전체 MCP 문서 보기",
   "land.mcpTabCloud": "클라우드 MCP (설치 불필요)",
   "land.mcpTabHttp": "로컬 HTTP",

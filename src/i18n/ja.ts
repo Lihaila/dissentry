@@ -351,7 +351,7 @@ export const ja: Dict = {
   "land.mcpToolAsk": "@handle 指定または全モデルで、別のモデル系列からセカンドオピニオンを取得します。",
   "land.mcpToolList": "設定済みモデル、チェッカー設定、ローカル/クラウドのルーティングを確認します。",
   "land.mcpToolTrust": "あなたの評価から集計されたモデル別の信頼度・チェック統計を読み取ります。",
-  "land.mcpTipGlobal": "ローカル MCP の最速起動：「npm i -g dissentry」後に command を \"dissentry\"、args を [\"mcp\"] に（nvm は絶対パス推奨）。公式 MCP レジストリ ID：io.github.Lihaila/dissentry。",
+  "land.mcpTipGlobal": "ローカル MCP の最速起動：「npm i -g dissentry」後に command を \"dissentry\"、args を [\"mcp\"] に（nvm は絶対パス推奨）。公式 MCP レジストリ ID：com.lihaila/dissentry。",
   "land.mcpDocsLink": "GitHub で MCP ドキュメント全文を見る",
   "land.mcpTabCloud": "クラウド MCP（導入不要）",
   "land.mcpTabHttp": "ローカル HTTP",

@@ -351,7 +351,7 @@ export const zh: Dict = {
   "land.mcpToolAsk": "按 @handle 或全部模型向其他模型家族征询第二意见。",
   "land.mcpToolList": "查看当前已配置的模型、核查员角色以及本地/云端路由。",
   "land.mcpToolTrust": "读取基于你历史评价生成的个人模型可信度与核查统计。",
-  "land.mcpTipGlobal": "本地 MCP 秒启技巧：执行一次 “npm i -g dissentry” 后改用 command: \"dissentry\"、args: [\"mcp\"]（nvm 环境建议填绝对路径）。官方 MCP 注册表标识：io.github.Lihaila/dissentry。",
+  "land.mcpTipGlobal": "本地 MCP 秒启技巧：执行一次 “npm i -g dissentry” 后改用 command: \"dissentry\"、args: [\"mcp\"]（nvm 环境建议填绝对路径）。官方 MCP 注册表标识：com.lihaila/dissentry。",
   "land.mcpDocsLink": "在 GitHub 查看完整 MCP 文档",
   "land.mcpTabCloud": "云端 MCP（免安装）",
   "land.mcpTabHttp": "本地 HTTP",

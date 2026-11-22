@@ -349,7 +349,7 @@ export const en = {
   "land.mcpToolAsk": "Ask another model family for a second opinion by @handle or all.",
   "land.mcpToolList": "Inspect configured models, checker roles, and Local vs. Cloud routing.",
   "land.mcpToolTrust": "Read personal accuracy and checker stats built from your verdicts.",
-  "land.mcpTipGlobal": "Local MCP fastest startup: run “npm i -g dissentry” once, then use command “dissentry” with args [\"mcp\"] (or absolute node + dissentry paths if using nvm). Official MCP Registry ID: io.github.Lihaila/dissentry.",
+  "land.mcpTipGlobal": "Local MCP fastest startup: run “npm i -g dissentry” once, then use command “dissentry” with args [\"mcp\"] (or absolute node + dissentry paths if using nvm). Official MCP Registry ID: com.lihaila/dissentry.",
   "land.mcpDocsLink": "Full MCP docs on GitHub",
   "land.mcpTabCloud": "Cloud MCP (Zero Install)",
   "land.mcpTabHttp": "Local HTTP",

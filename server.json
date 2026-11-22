@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.Lihaila/dissentry",
+  "name": "com.lihaila/dissentry",
   "title": "Dissentry",
   "description": "Multi-model AI fact-checker (Community Notes for AI) and second opinion across LLM families.",
   "websiteUrl": "https://dissentry.lihaila.com/mcp",
@@ -15,13 +15,13 @@
     "url": "https://github.com/Lihaila/dissentry",
     "source": "github"
   },
-  "version": "0.10.4",
+  "version": "0.10.5",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "dissentry",
-      "version": "0.10.4",
+      "version": "0.10.5",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

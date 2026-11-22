@@ -89,7 +89,7 @@ Inside Docker, reach Ollama on the host at `http://host.docker.internal:11434/v1
 
 Run Dissentry as a **Model Context Protocol (MCP)** server — either **Hosted Cloud MCP** (zero install, OAuth 2.1) or **Local MCP** (`stdio` & `Streamable HTTP`) — so your AI app or coding agent can call your other models to adversarially fact-check plans, code, and claims (`dissentry_check`), ask other model families for a second opinion (`dissentry_ask`), list configured models (`dissentry_list_models`), and read your personal trust stats (`dissentry_trust`).
 
-- **Official MCP Registry**: `io.github.Lihaila/dissentry`
+- **Official MCP Registry**: `com.lihaila/dissentry` (domain-verified via `lihaila.com`)
 - **Hosted Cloud MCP (zero install, OAuth 2.1)**: `https://dissentry.lihaila.com/v1/mcp` — connect directly from **Google App (Cloud MCP)**, **Claude**, **Cursor**, **ChatGPT**, or **Qwen Work**, sign in with OpenRouter (or bring your own keys) in the OAuth consent page; keys are AES-256-GCM encrypted inside your Bearer token and never stored in a database.
 - **Local Stdio**: `npx -y dissentry mcp` (zero daemon required; reuses `~/.dissentry/data.json` or env vars; add `--local-only` for strict Ollama/LM Studio privacy lock)
 - **Local Streamable HTTP**: automatically available at `http://127.0.0.1:4317/mcp` while `npx dissentry` is running, or headless via `npx -y dissentry mcp --http` (default `http://127.0.0.1:4318/mcp`)
