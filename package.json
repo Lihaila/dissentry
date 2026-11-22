@@ -1,7 +1,7 @@
 {
   "name": "dissentry",
   "mcpName": "io.github.Lihaila/dissentry",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Community Notes for AI answers. Ask one model, let the others dissent — with Web Search, DeepThink, shared thread memory, file/image attachments, and image/audio/video generation. Local-first, bring your own keys.",
   "scripts": {
     "dev": "vite",
