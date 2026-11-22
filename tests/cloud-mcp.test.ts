@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createCloudMcpApp, makeCloudSafeFetch } from '../server/cloud-mcp';
+import { MCP_TOOLS } from '../server/mcp';
 
 const SECRET = 'test-cloud-mcp-secret-at-least-32-chars-long-0123456789';
 const ORIGIN = 'https://dissentry.lihaila.com';
@@ -279,5 +280,11 @@ describe('Cloud MCP OAuth 2.1 + Streamable HTTP', () => {
     expect(srv.description.length).toBeLessThanOrEqual(100);
     expect(srv.remotes[0].type).toBe('streamable-http');
     expect(srv.remotes[0].url).toBe('https://dissentry.lihaila.com/v1/mcp');
+    // Required by Google Connected Console & Anthropic Claude Directory review validators:
+    for (const tool of MCP_TOOLS) {
+      expect(tool.title.length).toBeGreaterThan(3);
+      expect(tool.annotations.readOnlyHint).toBe(true);
+      expect(tool.annotations.destructiveHint).toBe(false);
+    }
   });
 });

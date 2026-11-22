@@ -397,6 +397,7 @@ function formatCheckMarkdown(res: CheckSummary): string {
 export const MCP_TOOLS = [
   {
     name: 'dissentry_list_models',
+    title: 'List Configured AI Models',
     description:
       'List the AI models and fact-checkers configured in Dissentry (from ~/.dissentry/data.json or environment variables), including each model handle, provider, modelId, checker flag, and whether it runs locally or in the cloud.',
     inputSchema: {
@@ -409,10 +410,11 @@ export const MCP_TOOLS = [
       },
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    annotations: { title: 'List Configured AI Models', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: 'dissentry_check',
+    title: 'Fact-Check with Multiple AI Models',
     description:
       'Fact-check and adversarially review an AI answer, architecture plan, code snippet, or technical claim using your configured Dissentry checker models in parallel (Community Notes for AI). Checkers stay silent unless they find a concrete error, bug, outdated claim, dangerous step, or critical omission, and duplicate findings merge into consensus notes. Use for high-stakes plans, code/security reviews, and factual verification — not trivial chatter.',
     inputSchema: {
@@ -447,10 +449,11 @@ export const MCP_TOOLS = [
       },
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: { title: 'Fact-Check with Multiple AI Models', readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
     name: 'dissentry_ask',
+    title: 'Ask Another AI Model Family',
     description:
       'Ask one or more configured Dissentry models (e.g. gpt, gemini, claude, deepseek, qwen, grok, or local ollama) for a second opinion, optionally letting your other checker models fact-check each answer and attach consensus dissent notes.',
     inputSchema: {
@@ -485,10 +488,11 @@ export const MCP_TOOLS = [
       },
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: { title: 'Ask Another AI Model Family', readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
     name: 'dissentry_trust',
+    title: 'Read Model Trust Statistics',
     description:
       'Read your personal model trust statistics computed from your Dissentry history (~/.dissentry/data.json), showing how often each model was corrected and how often its dissent notes were accepted.',
     inputSchema: {
@@ -496,7 +500,7 @@ export const MCP_TOOLS = [
       properties: {},
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    annotations: { title: 'Read Model Trust Statistics', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
 ] as const;
 
@@ -768,7 +772,13 @@ export async function handleMcpMessage(
         result: {
           protocolVersion,
           capabilities: { tools: {} },
-          serverInfo: { name: 'dissentry', version: pkg.version },
+          serverInfo: {
+            name: 'dissentry',
+            title: 'Dissentry',
+            version: pkg.version,
+            websiteUrl: 'https://dissentry.lihaila.com/mcp',
+            icons: [{ src: 'https://dissentry.lihaila.com/icon-192.png', mimeType: 'image/png', sizes: ['192x192'] }],
+          },
           instructions: opts.staticConfig
             ? 'Dissentry Cloud MCP provides multi-model fact-checking (Community Notes for AI) using the models you authorized via OAuth. Use dissentry_check to adversarially verify high-stakes answers, plans, or code; use dissentry_ask for a second opinion from another model family.'
             : 'Dissentry provides multi-model fact-checking (Community Notes for AI) using the models and keys configured locally in ~/.dissentry/data.json. Use dissentry_check to adversarially verify high-stakes answers, plans, or code; use dissentry_ask for a second opinion from another model family.',
