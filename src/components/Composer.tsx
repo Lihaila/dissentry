@@ -1,5 +1,5 @@
 import { ArrowUp, Brain, Check, Cloud, FileText, Globe, Lock, Paperclip, Shield, X } from 'lucide-react';
-import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react';
+import { useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from 'wouter';
 import { useT } from '../i18n';
 import { submitPost } from '../lib/engine';
@@ -23,11 +23,13 @@ interface Props {
   implicitHandle?: string;
   /** Lock composer to local models only (inherited from a local-only thread or quoted post). */
   forceLocalOnly?: boolean;
+  /** Optional ref to the underlying textarea for imperative focus. */
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
   onPosted?: (postId: string) => void;
   compact?: boolean;
 }
 
-export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicitHandle, forceLocalOnly, onPosted, compact }: Props) {
+export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicitHandle, forceLocalOnly, inputRef, onPosted, compact }: Props) {
   const t = useT();
   const profiles = useProfiles();
   const orAccount = useOpenRouterAccount();
@@ -298,7 +300,10 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
           )}
 
           <textarea
-            ref={ta}
+            ref={(el) => {
+              ta.current = el;
+              if (inputRef) inputRef.current = el;
+            }}
             value={text}
             autoFocus={autoFocus}
             rows={1}
