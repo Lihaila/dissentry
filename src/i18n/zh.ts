@@ -76,6 +76,8 @@ export const zh: Dict = {
   'post.regenerate': '重新生成',
   'post.copy': '复制',
   'post.copied': '已复制',
+  'post.showMore': '显示更多',
+  'post.showLess': '收起',
   'post.delete': '删除',
   'post.deleteConfirm': '删除这条帖子及其所有回复？',
 

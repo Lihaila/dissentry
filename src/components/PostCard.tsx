@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertTriangle, Brain, Check, ChevronDown, ChevronRight, Copy, Download, FileText, Film, Globe, Image as ImageIcon, ImageDown, Lock, MessageCircle, Paperclip, Quote, RefreshCw, ScanSearch, Square, Trash2, Volume2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useT } from '../i18n';
 import { db } from '../lib/db';
@@ -33,6 +33,22 @@ interface Props {
   onReplied?: (replyId: string) => void;
 }
 
+const COLLAPSE_MAX_PX = 160; // ~6.5 lines (~280 Latin / ~140 CJK chars), matching X's "Show more" fold
+const COLLAPSE_OVERFLOW_PX = 24; // avoid showing "Show more" for a tiny 1-line overflow
+
+function isLongPost(text: string): boolean {
+  if (!text) return false;
+  let weight = 0;
+  let lines = 1;
+  for (const ch of text) {
+    if (ch === '\n') lines++;
+    // X-style weighting: CJK/full-width counts as 2, Latin/ASCII as 1.
+    weight += /[\u1100-\u11ff\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\ufe30-\ufe6f\uff00-\uffef]/.test(ch) ? 2 : 1;
+    if (weight > 280 || lines > 6) return true;
+  }
+  return false;
+}
+
 export function PostCard({ post, profiles, lineBelow, replyingTo, focused, onReply, onReplied }: Props) {
   const t = useT();
   const [, navigate] = useLocation();
@@ -41,6 +57,31 @@ export function PostCard({ post, profiles, lineBelow, replyingTo, focused, onRep
   const [quoting, setQuoting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Posts that are streaming (or finished streaming while on screen) stay expanded so they never snap shut mid-read.
+  const [expanded, setExpanded] = useState(post.status === 'streaming');
+  const [overflows, setOverflows] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (post.status === 'streaming') setExpanded(true);
+  }, [post.status]);
+
+  const collapsible = !focused && post.status !== 'streaming' && isLongPost(post.text);
+
+  useLayoutEffect(() => {
+    if (!collapsible) {
+      setOverflows(false);
+      return;
+    }
+    const el = bodyRef.current;
+    if (!el) return;
+    const measure = () => setOverflows(el.scrollHeight > COLLAPSE_MAX_PX + COLLAPSE_OVERFLOW_PX);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [collapsible, post.text]);
   const profile = post.profileId ? profiles.get(post.profileId) : undefined;
   const notes = useLiveQuery(() => db.notes.where('postId').equals(post.id).sortBy('createdAt'), [post.id]) ?? [];
   const checks = useLiveQuery(() => db.checks.where('postId').equals(post.id).toArray(), [post.id]) ?? [];
@@ -94,7 +135,14 @@ export function PostCard({ post, profiles, lineBelow, replyingTo, focused, onRep
           <ThinkingPanel reasoning={post.reasoning} thinking={post.status === 'streaming' && !post.text} />
         )}
 
-        <div className={`mt-1 text-slate-800 ${focused ? 'text-[15.5px]' : ''}`}>
+        <div
+          ref={bodyRef}
+          className={`mt-1 text-slate-800 ${focused ? 'text-[15.5px]' : ''} ${
+            collapsible && overflows && !expanded
+              ? 'max-h-[160px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]'
+              : ''
+          }`}
+        >
           {isUser
             ? (post.text ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{highlightMentions(post.text)}</p> : null)
             : post.text
@@ -112,6 +160,15 @@ export function PostCard({ post, profiles, lineBelow, replyingTo, focused, onRep
                 )
               )}
         </div>
+        {collapsible && overflows && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+            className="mt-1 text-[13.5px] font-medium text-sky-600 transition hover:text-sky-700 hover:underline"
+          >
+            {expanded ? t('post.showLess') : t('post.showMore')}
+          </button>
+        )}
 
         {post.media && post.media.length > 0 && (
           <MediaGallery media={post.media} />

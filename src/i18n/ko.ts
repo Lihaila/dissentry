@@ -76,6 +76,8 @@ export const ko: Dict = {
   'post.regenerate': '다시 생성',
   'post.copy': '복사',
   'post.copied': '복사됨',
+  'post.showMore': '더 보기',
+  'post.showLess': '접기',
   'post.delete': '삭제',
   'post.deleteConfirm': '이 게시물과 모든 답글을 삭제할까요?',
 

@@ -76,6 +76,8 @@ export const ja: Dict = {
   'post.regenerate': '再生成',
   'post.copy': 'コピー',
   'post.copied': 'コピーしました',
+  'post.showMore': 'さらに表示',
+  'post.showLess': '折りたたむ',
   'post.delete': '削除',
   'post.deleteConfirm': 'この投稿と返信をすべて削除しますか？',
 

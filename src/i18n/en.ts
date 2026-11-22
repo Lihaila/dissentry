@@ -74,6 +74,8 @@ export const en = {
   'post.regenerate': 'Regenerate',
   'post.copy': 'Copy',
   'post.copied': 'Copied',
+  'post.showMore': 'Show more',
+  'post.showLess': 'Show less',
   'post.delete': 'Delete',
   'post.deleteConfirm': 'Delete this post and its replies?',
 
