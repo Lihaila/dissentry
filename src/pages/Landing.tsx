@@ -59,8 +59,8 @@ export function LandingPage() {
     <div className="min-h-screen bg-white text-slate-900">
       {/* Nav — matches Lihai La's product header pattern (Lihai La | Product) */}
       <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-3">
-          <div className="flex shrink-0 items-center gap-2.5">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-5">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             <LihaiLaBrandLink />
             <span aria-hidden className="h-4 w-px bg-slate-200" />
             <Link href="/welcome" className="shrink-0"><Logo size={25} /></Link>
@@ -71,9 +71,9 @@ export function LandingPage() {
             <a href="#faq" className="transition hover:text-ink">{t('land.navFaq')}</a>
             <a href="https://github.com/Lihaila/dissentry" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 transition hover:text-ink"><Code2 size={15} />GitHub</a>
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-3">
             <LanguageSwitcher compact />
-            <Link href="/" onClick={markStarted} className="rounded-full bg-ink px-4 py-2 text-[13.5px] font-semibold text-white shadow-xs transition hover:bg-slate-800 active:scale-[.98]">
+            <Link href="/" onClick={markStarted} className="hidden whitespace-nowrap rounded-full bg-ink px-4 py-2 text-[13.5px] font-semibold text-white shadow-xs transition hover:bg-slate-800 active:scale-[.98] sm:inline-flex">
               {t('land.openApp')}
             </Link>
           </div>

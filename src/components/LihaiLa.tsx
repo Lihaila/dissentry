@@ -35,9 +35,9 @@ export function LihaiLaBrandLink({ compact = false, className = '' }: { compact?
     <a
       href={lihailaUrl(lang)}
       title={t('brand.backHome')}
-      className={`inline-flex items-center gap-1.5 rounded-lg font-semibold tracking-tight text-slate-600 transition hover:text-ink ${compact ? 'text-[13px]' : 'text-[14.5px]'} ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg font-semibold tracking-tight text-slate-600 transition hover:text-ink ${compact ? 'text-[13px]' : 'text-[13.5px] sm:text-[14.5px]'} ${className}`}
     >
-      <LihaiLaMark size={compact ? 16 : 19} className="text-ink" />
+      <LihaiLaMark size={compact ? 16 : 19} className={`shrink-0 text-ink ${compact ? '' : 'max-sm:h-4 max-sm:w-4'}`} />
       <span>Lihai La</span>
     </a>
   );
