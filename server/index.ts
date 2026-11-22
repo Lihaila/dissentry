@@ -18,6 +18,7 @@ if (flag('help') || flag('h')) {
   console.log(`dissentry: Community Notes for AI answers
 
 Usage: npx dissentry [options]
+       npx -y dissentry mcp [--local-only] [--data-dir <dir>]
 
   --port <n>          Port to listen on (default 4317, env PORT)
   --host <addr>       Address to bind (default 127.0.0.1, env HOST)
@@ -25,6 +26,7 @@ Usage: npx dissentry [options]
   --data-dir <dir>    Directory for local disk persistence (default ~/.dissentry, env DISSENTRY_DATA_DIR)
   --no-disk           Disable automatic local disk persistence
   --no-open           Do not open the browser
+  mcp                 Run Dissentry as a local stdio MCP server (for Claude Code, Cursor, Claude Desktop, etc.)
 `);
   process.exit(0);
 }
@@ -55,7 +57,7 @@ const app = createApp({ allowedHosts: ['localhost', '127.0.0.1', '[::1]', ...ext
 
 serve({ fetch: app.fetch, port, hostname: host }, (info) => {
   const url = `http://localhost:${info.port}`;
-  console.log(`\n  Dissentry is running at ${url}\n  API keys never leave this machine except to the provider you call.\n  Press Ctrl+C to stop.\n`);
+  console.log(`\n  Dissentry is running at ${url}\n  MCP (Streamable HTTP): ${url}/mcp  |  Stdio: npx -y dissentry mcp\n  API keys never leave this machine except to the provider you call.\n  Press Ctrl+C to stop.\n`);
   if (dataFileDisplay) console.log(`  Local disk persistence: ${dataFileDisplay} (owner-only permissions, auto-restores if browser data is cleared).\n`);
   if (envProxyUrl()) console.log(`  System proxy detected: ${describeProxy(envProxyUrl())} (used when Settings → Network proxy is "System").\n`);
   if (!flag('no-open') && !process.env.CI && host === '127.0.0.1') {

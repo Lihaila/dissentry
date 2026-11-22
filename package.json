@@ -4,7 +4,7 @@
   "description": "Community Notes for AI answers. Ask one model, let the others dissent — with Web Search, DeepThink, shared thread memory, file/image attachments, and image/audio/video generation. Local-first, bring your own keys.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && tsup",
+    "build": "tsc --noEmit && tsup && vite build",
     "build:web": "vite build",
     "start": "node bin/dissentry.js",
     "test": "vitest run",

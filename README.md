@@ -40,6 +40,7 @@ https://github.com/user-attachments/assets/0a38fb4d-9615-4770-bb28-a1867de8e7e5
 - **Share as image**: turn any answer and its notes into a polished card for X, in one click.
 - **Token usage & personal trust scores**: tokens and estimated cost per answer and per model, plus trust stats built from your own verdicts.
 - **Local vs. Cloud clarity & Local-only thread lock**: every model is clearly labeled **Local** or **Cloud**, the composer shows before sending whether a post stays on your device or shares context with cloud checkers, and a 1-click **Local only** lock enforces a hard privacy boundary across the entire thread (including replies, quotes, and checks).
+- **Built-in MCP Server (stdio & Streamable HTTP)**: expose Dissentry's multi-model fact-checker (`dissentry_check`, `dissentry_ask`, `dissentry_list_models`, `dissentry_trust`) directly inside **Claude Code**, **Cursor**, **Claude Desktop**, **Antigravity**, **DSH (DeepSeek Harness)**, **WorkBuddy**, and **Qwen Work / Qwen Code** — reusing your `~/.dissentry/data.json` models, keys, and proxies with zero duplicate setup.
 - **Private & persistent by design**: keys, chats, attachments, generated media, and your custom profile avatar stay on your device. Running `npx dissentry` automatically syncs to `~/.dissentry/data.json` (`0600` owner-only permissions) and auto-restores if browser data is cleared; the hosted web app requests browser persistent storage and supports 1-click local JSON file auto-backup. No accounts, no telemetry.
 - **Four languages**: English, 简体中文, 日本語, 한국어.
 - **Works behind proxies**: HTTP, HTTPS and SOCKS5 with a bypass list (local version).
@@ -79,6 +80,66 @@ docker build -t dissentry . && docker run -p 4317:4317 dissentry
 ```
 
 Inside Docker, reach Ollama on the host at `http://host.docker.internal:11434/v1`.
+
+## MCP Server (Claude Code, Cursor, DSH, WorkBuddy, Qwen Work, Antigravity)
+
+Run Dissentry as a local **Model Context Protocol (MCP)** server so your coding agent or desktop AI can call your other models to adversarially fact-check plans, code, and claims (`dissentry_check`), ask other model families for a second opinion (`dissentry_ask`), list configured models (`dissentry_list_models`), and read your personal trust stats (`dissentry_trust`).
+
+It automatically reuses the models, checkers, API keys / OpenRouter key, and proxy settings from `~/.dissentry/data.json` (created by `npx dissentry`), or falls back to environment variables (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, `XAI_API_KEY`, `DISSENTRY_OLLAMA_MODEL`). Add `--local-only` to enforce a strict on-device Ollama/LM Studio privacy lock.
+
+Dissentry supports **both `stdio` and `Streamable HTTP`**:
+- **Stdio**: `npx -y dissentry mcp` (zero daemon required)
+- **Streamable HTTP**: automatically available at `http://127.0.0.1:4317/mcp` while `npx dissentry` is running, or headless via `npx -y dissentry mcp --http` (default `http://127.0.0.1:4318/mcp`)
+
+**Claude Code / Qwen Code (CLI):**
+
+```bash
+# Claude Code (stdio)
+claude mcp add dissentry -- npx -y dissentry mcp
+
+# Qwen Code / Qwen Work (stdio or Streamable HTTP)
+qwen mcp add dissentry -- npx -y dissentry mcp
+# or: qwen mcp add --transport http dissentry http://127.0.0.1:4317/mcp
+```
+
+**WorkBuddy / Cursor / Claude Desktop / Windsurf / Antigravity (`mcpServers` JSON):**
+
+```json
+{
+  "mcpServers": {
+    "dissentry": {
+      "command": "npx",
+      "args": ["-y", "dissentry", "mcp"]
+    }
+  }
+}
+```
+
+For **Qwen Work / Qwen Code** (`~/.qwen/settings.json`) Streamable HTTP mode, use `"httpUrl": "http://127.0.0.1:4317/mcp"`. For **WorkBuddy** Streamable HTTP mode, use `"url": "http://127.0.0.1:4317/mcp"`.
+
+**DSH / DeepSeek Harness (`@deepseek-ai/dsh-mcp-client` / `dsh-mcp-center`):**
+
+```yaml
+# Stdio (recommended)
+- id: mcp-dissentry
+  name: '@deepseek-ai/dsh-mcp-client'
+  config:
+    serverName: dissentry
+    transport: stdio
+    command: npx
+    args:
+      - '-y'
+      - 'dissentry'
+      - 'mcp'
+
+# Or Streamable HTTP (while `npx dissentry` or `npx dissentry mcp --http` is running)
+- id: mcp-dissentry-http
+  name: '@deepseek-ai/dsh-mcp-client'
+  config:
+    serverName: dissentry
+    transport: streamable-http
+    url: http://127.0.0.1:4317/mcp
+```
 
 ### Using a proxy (mainland China, company networks)
 

@@ -12,7 +12,7 @@ function dissentryApi(): Plugin {
       const app = createApp({ allowedHosts: ['localhost', '127.0.0.1', '[::1]'] });
       const listener = getRequestListener(app.fetch);
       server.middlewares.use((req, res, next) => {
-        if (req.url?.startsWith('/api/')) listener(req, res);
+        if (req.url?.startsWith('/api/') || req.url === '/mcp' || req.url?.startsWith('/mcp?')) listener(req, res);
         else next();
       });
     },

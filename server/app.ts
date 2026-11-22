@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { fetch as undiciFetch, type Dispatcher } from 'undici';
+import { handleMcpHttpRequest } from './mcp';
 import { BYPASS_HEADER, describeProxy, dispatcherFor, envProxyUrl, PROXY_HEADER, validateProxyUrl } from './network';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
@@ -13,6 +14,8 @@ export interface AppOptions {
   dataDir?: string;
   /** Human-friendly display path for dataFile shown in Settings (e.g. ~/.dissentry/data.json). */
   dataFileDisplay?: string;
+  /** Lock the built-in Streamable HTTP /mcp endpoint strictly to local models. */
+  mcpLocalOnly?: boolean;
 }
 
 export const TARGET_HEADER = 'x-dissentry-target';
@@ -47,10 +50,10 @@ export function createApp(opts: AppOptions) {
   const app = new Hono();
   const anyHost = opts.allowedHosts.includes('*');
 
-  // Guard every API call:
+  // Guard every API and MCP call:
   //  - Host must be ours (blocks DNS-rebinding attacks from random websites).
-  //  - Origin, if sent, must match Host (blocks other sites from using this as an open proxy).
-  app.use('/api/*', async (c, next) => {
+  //  - Origin, if sent, must match Host (blocks other sites from using this as an open proxy or MCP client).
+  const guardLocal = async (c: Parameters<Parameters<typeof app.use>[1]>[0], next: () => Promise<void>) => {
     const host = c.req.header('host');
     if (!anyHost && !opts.allowedHosts.includes(hostname(host))) {
       return c.json({ error: 'Host not allowed' }, 403);
@@ -62,13 +65,20 @@ export function createApp(opts: AppOptions) {
       if (originHost !== host) return c.json({ error: 'Cross-origin requests are not allowed' }, 403);
     }
     await next();
-  });
+  };
+  app.use('/api/*', guardLocal);
+  app.use('/mcp', guardLocal);
+
+  // Built-in Streamable HTTP MCP endpoint so DSH, WorkBuddy, Qwen Work/Code, Claude Code, and Cursor
+  // can connect directly to http://127.0.0.1:4317/mcp whenever `npx dissentry` is running.
+  app.all('/mcp', (c) => handleMcpHttpRequest(c.req.raw, { dataDir: opts.dataDir, forceLocalOnly: opts.mcpLocalOnly }));
 
   const dataFile = opts.dataDir ? join(opts.dataDir, 'data.json') : undefined;
 
   app.get('/api/health', (c) => c.json({
     ok: true,
     proxy: true,
+    mcp: '/mcp',
     systemProxy: describeProxy(envProxyUrl()) ?? null,
     storage: Boolean(dataFile),
     dataFile: dataFile ? (opts.dataFileDisplay ?? dataFile) : null,
