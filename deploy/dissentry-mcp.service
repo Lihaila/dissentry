@@ -1,0 +1,26 @@
+[Unit]
+Description=Dissentry Cloud MCP (dissentry.lihaila.com/v1/mcp)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dissentry
+Group=dissentry
+WorkingDirectory=/opt/dissentry-mcp
+EnvironmentFile=/etc/dissentry-mcp/env
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8795
+Environment=DISSENTRY_PUBLIC_ORIGIN=https://dissentry.lihaila.com
+ExecStart=/usr/bin/node --max-old-space-size=96 /opt/dissentry-mcp/dist/cloud-mcp.js
+Restart=always
+RestartSec=3
+MemoryMax=160M
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

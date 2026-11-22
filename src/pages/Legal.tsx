@@ -49,21 +49,28 @@ const PRIVACY: Record<Lang, DocCopy> = {
         ],
       },
       {
-        heading: '4. Local Mode (npx dissentry & Docker)',
+        heading: '4. Local Mode (npx dissentry, Local MCP & Docker)',
         body: [
-          'When you run Dissentry on your own computer via npx dissentry or Docker, the bundled local server listens on your machine (127.0.0.1 by default) to serve the web app and act as a stateless pass-through proxy for local models and optional HTTP/HTTPS/SOCKS5 network proxies.',
-          'The local server does not persist, log, or forward your API keys or conversation contents anywhere other than the AI provider endpoint you chose.',
+          'When you run Dissentry on your own computer via npx dissentry, npx dissentry mcp, or Docker, the bundled local server listens on your machine (127.0.0.1 by default) to serve the web app, expose Local MCP, and act as a stateless pass-through proxy for local models and optional HTTP/HTTPS/SOCKS5 network proxies.',
+          'The local server stores your settings only on your own device (~/.dissentry/data.json with owner-only permissions) and never sends them to Lihai La.',
         ],
       },
       {
-        heading: '5. Share as Image & JSON Export',
+        heading: '5. Optional Hosted Cloud MCP (dissentry.lihaila.com/v1/mcp)',
+        body: [
+          'If you explicitly connect the optional Hosted Cloud MCP endpoint from an MCP client (such as Google App / Gemini, Claude, Cursor, or ChatGPT), authorization uses OAuth 2.1 with PKCE. Your OpenRouter or provider API keys are encrypted inside your OAuth Bearer token using AES-256-GCM and are never persisted in any server database.',
+          'When your MCP client invokes a tool (dissentry_check, dissentry_ask, dissentry_list_models), the Cloud MCP service decrypts your token in memory, forwards the request strictly over HTTPS to allowlisted AI provider endpoints, and returns the result without logging or storing prompts, answers, or dissent notes.',
+        ],
+      },
+      {
+        heading: '6. Share as Image & JSON Export',
         body: [
           'Shareable PNG cards and JSON backups are rendered and generated entirely on your device. Nothing is uploaded to Lihai La when you copy, download, or share an image.',
           'If you export with “Export with API keys”, the downloaded JSON file contains your API keys in plain text — store it securely and do not share it publicly.',
         ],
       },
       {
-        heading: '6. Hosting & Contact',
+        heading: '7. Hosting & Contact',
         body: [
           'The hosted static version at dissentry.lihaila.com is served without user accounts, analytics scripts, or advertising trackers. Standard web server infrastructure may temporarily process routine HTTP access metadata (such as IP address, user agent, and requested static asset path) to deliver files and protect against abuse.',
           'Questions about privacy? Email contact@lihaila.com or write to Lihai La LLC, 1111B S Governors Ave STE 34093, Dover, DE 19904, USA.',
@@ -99,21 +106,28 @@ const PRIVACY: Record<Lang, DocCopy> = {
         ],
       },
       {
-        heading: '4. 本地模式（npx dissentry 与 Docker）',
+        heading: '4. 本地模式（npx dissentry、本地 MCP 与 Docker）',
         body: [
-          '当你通过 npx dissentry 或 Docker 在自己电脑上运行时，内置的本地服务器仅监听在本机（默认 127.0.0.1），用于提供网页界面并作为无状态透传代理（支持本地模型及可选 HTTP/HTTPS/SOCKS5 代理）。',
-          '本地服务器不会保存、记录或向除你指定服务商之外的任何地方转发你的密钥或对话内容。',
+          '当你通过 npx dissentry、npx dissentry mcp 或 Docker 在自己电脑上运行时，内置的本地服务器仅监听在本机（默认 127.0.0.1），用于提供网页界面、本地 MCP 及无状态透传代理。',
+          '本地数据仅保存在你的设备（~/.dissentry/data.json，仅当前系统用户可读），绝不会发送给 Lihai La。',
         ],
       },
       {
-        heading: '5. 分享为图片与数据导出',
+        heading: '5. 可选云端托管 MCP（dissentry.lihaila.com/v1/mcp）',
+        body: [
+          '仅当你主动在 Google App（Gemini）、Claude、Cursor 或 ChatGPT 等客户端接入可选的云端托管 MCP 端点时，授权通过 OAuth 2.1（PKCE）完成。你的 OpenRouter 或服务商 API 密钥会以 AES-256-GCM 加密封装在你自己的 OAuth 令牌中，绝不写入任何服务端数据库。',
+          '当客户端调用工具（dissentry_check、dissentry_ask、dissentry_list_models）时，云端服务仅在内存中解密令牌并将请求通过 HTTPS 转发至白名单 AI 服务商，不记录、不存储你的提问、回答或异议内容。',
+        ],
+      },
+      {
+        heading: '6. 分享为图片与数据导出',
         body: [
           '分享 PNG 卡片和 JSON 备份均完全在你的设备上生成，复制、下载或分享图片时不会上传任何数据到服务器。',
           '若你选择“连同 API 密钥导出”，生成的 JSON 文件会包含明文密钥，请妥善保管，切勿公开分享。',
         ],
       },
       {
-        heading: '6. 托管服务与联系我们',
+        heading: '7. 托管服务与联系我们',
         body: [
           'dissentry.lihaila.com 托管版仅提供静态网页文件，不包含用户账号系统、第三方统计脚本或广告追踪器。标准 Web 服务器基础设施在提供静态文件及防止滥用时，可能短暂处理常规 HTTP 访问日志（如 IP 地址与请求路径），其中不包含任何提示词或 API 密钥。',
           '如有隐私相关问题，请联系 contact@lihaila.com，或致函 Lihai La LLC, 1111B S Governors Ave STE 34093, Dover, DE 19904, USA。',
@@ -148,19 +162,25 @@ const PRIVACY: Record<Lang, DocCopy> = {
         ],
       },
       {
-        heading: '4. ローカル実行（npx dissentry / Docker）',
+        heading: '4. ローカル実行（npx dissentry / ローカル MCP / Docker）',
         body: [
-          'npx dissentry や Docker でローカル実行する場合、同梱サーバーは自分の端末（既定 127.0.0.1）で動作し、ローカルモデルや任意の HTTP/HTTPS/SOCKS5 プロキシ向けのステートレスな中継のみを行います。キーや会話の保存・記録は行いません。',
+          'npx dissentry や npx dissentry mcp、Docker でローカル実行する場合、同梱サーバーは自分の端末（既定 127.0.0.1）で動作し、設定は端末内の ~/.dissentry/data.json のみに保存されます。',
         ],
       },
       {
-        heading: '5. 画像共有とデータエクスポート',
+        heading: '5. 任意のクラウド MCP（dissentry.lihaila.com/v1/mcp）',
+        body: [
+          'Google App（Gemini）・Claude・Cursor 等から任意のクラウド MCP に接続した場合のみ、OAuth 2.1（PKCE）で認証を行います。API キーは AES-256-GCM で暗号化して OAuth トークン内に保持され、サーバーのデータベースには保存されません。リクエストはメモリ上でのみ許可済み AI プロバイダーへ転送され、会話内容は記録・保存されません。',
+        ],
+      },
+      {
+        heading: '6. 画像共有とデータエクスポート',
         body: [
           '共有用 PNG 画像や JSON バックアップはすべて端末内で生成されます。サーバーへのアップロードは行いません。「API キーも含めてエクスポート」したファイルにはキーが平文で含まれるため安全に管理してください。',
         ],
       },
       {
-        heading: '6. ホスティングとお問い合わせ',
+        heading: '7. ホスティングとお問い合わせ',
         body: [
           'dissentry.lihaila.com は静的ファイルとして配信され、アカウントやトラッカーを含みません。配信や不正対策のため、通常の Web サーバーログ（IP アドレスや静的ファイルパス等）が一時的に処理される場合がありますが、プロンプトや API キーは含まれません。',
           'お問い合わせ：contact@lihaila.com（Lihai La LLC, 1111B S Governors Ave STE 34093, Dover, DE 19904, USA）',
@@ -195,19 +215,25 @@ const PRIVACY: Record<Lang, DocCopy> = {
         ],
       },
       {
-        heading: '4. 로컬 모드 (npx dissentry / Docker)',
+        heading: '4. 로컬 모드 (npx dissentry / 로컬 MCP / Docker)',
         body: [
-          'npx dissentry 또는 Docker로 로컬 실행 시 내장 서버는 내 컴퓨터(기본 127.0.0.1)에서 실행되며 로컬 모델과 선택적 HTTP/HTTPS/SOCKS5 프록시를 위한 무상태 전달만 수행합니다. 키나 대화를 저장하거나 기록하지 않습니다.',
+          'npx dissentry, npx dissentry mcp 또는 Docker로 로컬 실행 시 내장 서버는 내 컴퓨터(기본 127.0.0.1)에서만 실행되며 설정은 내 기기의 ~/.dissentry/data.json에만 저장됩니다.',
         ],
       },
       {
-        heading: '5. 이미지 공유 및 백업 내보내기',
+        heading: '5. 선택적 클라우드 MCP (dissentry.lihaila.com/v1/mcp)',
+        body: [
+          'Google App(Gemini), Claude, Cursor 등에서 선택적 클라우드 MCP에 직접 연결한 경우에만 OAuth 2.1(PKCE) 인증을 사용합니다. API 키는 AES-256-GCM으로 암호화되어 OAuth 토큰 내부에만 보관되며 서버 데이터베이스에 저장되지 않습니다. 도구 요청은 메모리에서만 허용된 AI 제공자로 전달되며 프롬프트와 답변은 기록·저장되지 않습니다.',
+        ],
+      },
+      {
+        heading: '6. 이미지 공유 및 백업 내보내기',
         body: [
           '공유용 PNG 카드와 JSON 백업은 모두 기기 내에서 생성되며 서버에 업로드되지 않습니다. "API 키 포함 내보내기" 파일에는 키가 평문으로 포함되므로 안전하게 보관하세요.',
         ],
       },
       {
-        heading: '6. 호스팅 및 문의',
+        heading: '7. 호스팅 및 문의',
         body: [
           'dissentry.lihaila.com은 계정이나 추적 스크립트 없이 정적 파일로 제공됩니다. 파일 전송 및 남용 방지를 위해 일반 웹 서버 접근 로그(IP 주소, 정적 파일 경로 등)가 일시적으로 처리될 수 있으나, 프롬프트나 API 키는 포함되지 않습니다.',
           '문의: contact@lihaila.com (Lihai La LLC, 1111B S Governors Ave STE 34093, Dover, DE 19904, USA)',

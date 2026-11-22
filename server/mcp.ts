@@ -13,7 +13,7 @@ import type { Check, Note, Post, Profile, Severity } from '../src/lib/types';
 import { dispatcherFor } from './network';
 
 export const MCP_PROTOCOL_VERSION = '2025-03-26';
-const SUPPORTED_PROTOCOL_VERSIONS = new Set(['2024-11-05', '2025-03-26', '2025-06-18']);
+const SUPPORTED_PROTOCOL_VERSIONS = new Set(['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25']);
 const CALL_TIMEOUT_MS = 90_000;
 
 interface StoredSettings {
@@ -40,8 +40,14 @@ export interface McpRuntimeOptions {
   forceLocalOnly?: boolean;
   /** Optional env override (for tests). */
   env?: Record<string, string | undefined>;
-  /** Optional custom fetch (for tests). */
+  /** Optional custom fetch (for tests or cloud SSRF guard). */
   fetchImpl?: typeof fetch;
+  /** Optional pre-resolved config (used by multi-tenant Cloud MCP; skips disk & env). */
+  staticConfig?: {
+    profiles: Profile[];
+    settings?: StoredSettings;
+    source?: string;
+  };
 }
 
 interface LoadedConfig {
@@ -139,6 +145,16 @@ function envProfiles(env: Record<string, string | undefined>): Profile[] {
 }
 
 export async function loadDissentryConfig(opts: McpRuntimeOptions = {}): Promise<LoadedConfig> {
+  if (opts.staticConfig) {
+    return {
+      profiles: opts.staticConfig.profiles,
+      posts: [],
+      notes: [],
+      checks: [],
+      settings: opts.staticConfig.settings ?? {},
+      source: opts.staticConfig.source ?? 'Dissentry Cloud MCP',
+    };
+  }
   const env = opts.env ?? process.env;
   const dataDir = opts.dataDir ?? env.DISSENTRY_DATA_DIR ?? join(homedir(), '.dissentry');
   const dataFile = join(dataDir, 'data.json');
@@ -753,8 +769,9 @@ export async function handleMcpMessage(
           protocolVersion,
           capabilities: { tools: {} },
           serverInfo: { name: 'dissentry', version: pkg.version },
-          instructions:
-            'Dissentry provides multi-model fact-checking (Community Notes for AI) using the models and keys configured locally in ~/.dissentry/data.json. Use dissentry_check to adversarially verify high-stakes answers, plans, or code; use dissentry_ask for a second opinion from another model family.',
+          instructions: opts.staticConfig
+            ? 'Dissentry Cloud MCP provides multi-model fact-checking (Community Notes for AI) using the models you authorized via OAuth. Use dissentry_check to adversarially verify high-stakes answers, plans, or code; use dissentry_ask for a second opinion from another model family.'
+            : 'Dissentry provides multi-model fact-checking (Community Notes for AI) using the models and keys configured locally in ~/.dissentry/data.json. Use dissentry_check to adversarially verify high-stakes answers, plans, or code; use dissentry_ask for a second opinion from another model family.',
         },
       };
     }

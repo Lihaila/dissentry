@@ -4,6 +4,8 @@
 
 - Homepage: https://dissentry.lihaila.com/
 - MCP Setup Guide: https://dissentry.lihaila.com/mcp
+- Hosted Cloud MCP (Streamable HTTP + OAuth 2.1): https://dissentry.lihaila.com/v1/mcp
+- Official MCP Registry: io.github.Lihaila/dissentry
 - Privacy Policy: https://dissentry.lihaila.com/privacy
 - Terms of Service: https://dissentry.lihaila.com/terms
 - Publisher: Lihai La LLC (https://lihaila.com/)

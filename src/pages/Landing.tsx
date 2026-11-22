@@ -29,9 +29,39 @@ const MCP_TOOLS: { name: string; desc: TKey }[] = [
   { name: 'dissentry_trust', desc: 'land.mcpToolTrust' },
 ];
 
-type McpTabId = 'json' | 'google' | 'claude' | 'qwen' | 'dsh' | 'http';
+type McpTabId = 'cloud' | 'google' | 'json' | 'claude' | 'qwen' | 'dsh' | 'http';
 
 const MCP_TABS: { id: McpTabId; label: string | TKey; isKey?: boolean; hint: TKey; code: string }[] = [
+  {
+    id: 'cloud',
+    label: 'land.mcpTabCloud',
+    isKey: true,
+    hint: 'land.mcpHintCloud',
+    code: `# Hosted Cloud MCP URL (Streamable HTTP + OAuth 2.1):
+https://dissentry.lihaila.com/v1/mcp
+
+# Works with zero install in:
+# • Google App (Gemini) → Cloud MCP
+# • Claude (Web / Desktop / Mobile) → Custom Connector
+# • Cursor / ChatGPT / Qwen Work → Remote MCP URL
+# Sign in once with OpenRouter (or your API keys) in the OAuth popup.`,
+  },
+  {
+    id: 'google',
+    label: 'Google App',
+    hint: 'land.mcpHintGoogle',
+    code: `# Option A — Cloud MCP (easiest, zero install, no sandbox setup):
+Setup method:  Cloud MCP
+URL:           https://dissentry.lihaila.com/v1/mcp
+
+# Option B — Local MCP (uses ~/.dissentry/data.json & local Ollama):
+Setup method:  Local MCP
+Server Name:   Dissentry
+Command:       npx -y dissentry mcp
+# (nvm on macOS? Use absolute node + dissentry paths after \`npm i -g dissentry\`)
+# Sandbox → Customize Sandbox (⌘⇧. for dotfiles):
+#   ~/.dissentry → R   |   ~/.nvm → R + X   |   Outbound network ✓`,
+  },
   {
     id: 'json',
     label: 'Cursor / Antigravity / WorkBuddy',
@@ -46,30 +76,16 @@ const MCP_TABS: { id: McpTabId; label: string | TKey; isKey?: boolean; hint: TKe
 }`,
   },
   {
-    id: 'google',
-    label: 'Google App',
-    hint: 'land.mcpHintGoogle',
-    code: `Setup method:  Local MCP
-Server Name:   Dissentry
-Description:   Multi-model AI fact-checker & second opinion
-Command:       npx -y dissentry mcp
-
-# Using nvm on macOS? Run \`npm i -g dissentry\` once, then use absolute paths:
-# /Users/<you>/.nvm/versions/node/<ver>/bin/node /Users/<you>/.nvm/versions/node/<ver>/bin/dissentry mcp
-
-Sandbox settings → Customize Sandbox (press ⌘⇧. to show dotfiles):
-  • ~/.dissentry  → R (Read)
-  • ~/.nvm        → R + X (if using nvm)
-  • Allow outbound network access ✓`,
-  },
-  {
     id: 'claude',
     label: 'Claude Code',
     hint: 'land.mcpHintClaude',
-    code: `# Add via stdio (zero daemon required)
+    code: `# Hosted Cloud MCP (OAuth 2.1, zero local setup)
+claude mcp add --transport http dissentry https://dissentry.lihaila.com/v1/mcp
+
+# Or Local stdio (reuses ~/.dissentry/data.json)
 claude mcp add dissentry -- npx -y dissentry mcp
 
-# Optional: lock checks strictly to local Ollama / LM Studio
+# Optional: lock local checks strictly to Ollama / LM Studio
 claude mcp add dissentry -- npx -y dissentry mcp --local-only`,
   },
   {
@@ -134,7 +150,7 @@ export function LandingPage({ initialSection }: { initialSection?: string } = {}
   const profiles = useProfiles();
   const isReady = Boolean(orAccount) || (profiles?.length ?? 0) > 0;
   const [copiedCmd, setCopiedCmd] = useState(false);
-  const [mcpTab, setMcpTab] = useState<McpTabId>('json');
+  const [mcpTab, setMcpTab] = useState<McpTabId>('cloud');
   const [copiedMcp, setCopiedMcp] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
 

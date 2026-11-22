@@ -1,8 +1,5 @@
-# Publishes to npm when a version tag (v1.2.3) is pushed.
-# Uses npm trusted publishing (OIDC): no npm token is stored in GitHub, and the
-# package gets a provenance statement linking it to this exact commit and workflow.
-# One-time setup on npmjs.com: package → Settings → Trusted publisher → GitHub Actions,
-# repository Lihaila/dissentry, workflow publish.yml.
+# Publishes to npm and the Official MCP Registry when a version tag (v1.2.3) is pushed.
+# Uses OIDC trusted publishing for both npm and registry.modelcontextprotocol.io (no long-lived secrets).
 name: Publish to npm
 
 on:
@@ -12,6 +9,9 @@ on:
 permissions:
   contents: read
   id-token: write
+
+env:
+  MCP_PUBLISHER_VERSION: v1.8.12
 
 jobs:
   publish:
@@ -25,12 +25,60 @@ jobs:
           registry-url: https://registry.npmjs.org
       # Trusted publishing needs npm 11.5.1 or newer.
       - run: npm install -g npm@latest && npm --version
-      - name: Tag must match package.json version
+      - name: Tag must match package.json and server.json versions
         run: |
-          v="$(node -p "require('./package.json').version")"
-          if [ "v$v" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $v"; exit 1
-          fi
+          node -e '
+            const pkg = require("./package.json");
+            const srv = require("./server.json");
+            if ("v" + pkg.version !== process.env.GITHUB_REF_NAME) {
+              console.error(`Tag ${process.env.GITHUB_REF_NAME} != package.json ${pkg.version}`);
+              process.exit(1);
+            }
+            if (srv.version !== pkg.version || srv.packages?.[0]?.version !== pkg.version) {
+              console.error(`server.json versions do not match package.json ${pkg.version}`);
+              process.exit(1);
+            }
+            if (pkg.mcpName !== srv.name) {
+              console.error(`package.json mcpName (${pkg.mcpName}) != server.json name (${srv.name})`);
+              process.exit(1);
+            }
+          '
       - run: npm ci
       - run: npm test
       - run: npm publish --access public
+
+      - name: Wait for npm registry visibility
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          for i in $(seq 1 12); do
+            if curl -fsSL "https://registry.npmjs.org/dissentry/$v" | grep -q '"mcpName"'; then
+              echo "npm package dissentry@$v with mcpName is visible."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::warning::Timed out waiting for npm cache; continuing to MCP Registry publish."
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4
+
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+          archive="mcp-publisher_${os}_${arch}.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release-publisher.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive"
+
+      - name: Publish to Official MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

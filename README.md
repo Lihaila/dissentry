@@ -87,21 +87,23 @@ Inside Docker, reach Ollama on the host at `http://host.docker.internal:11434/v1
 
 ## MCP Server (Google App, Claude Code, Cursor, DSH, WorkBuddy, Qwen Work, Antigravity)
 
-Run Dissentry as a local **Model Context Protocol (MCP)** server so your coding agent or desktop AI can call your other models to adversarially fact-check plans, code, and claims (`dissentry_check`), ask other model families for a second opinion (`dissentry_ask`), list configured models (`dissentry_list_models`), and read your personal trust stats (`dissentry_trust`).
+Run Dissentry as a **Model Context Protocol (MCP)** server — either **Hosted Cloud MCP** (zero install, OAuth 2.1) or **Local MCP** (`stdio` & `Streamable HTTP`) — so your AI app or coding agent can call your other models to adversarially fact-check plans, code, and claims (`dissentry_check`), ask other model families for a second opinion (`dissentry_ask`), list configured models (`dissentry_list_models`), and read your personal trust stats (`dissentry_trust`).
 
-It automatically reuses the models, checkers, API keys / OpenRouter key, and proxy settings from `~/.dissentry/data.json` (created by `npx dissentry`), or falls back to environment variables (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, `XAI_API_KEY`, `DISSENTRY_OLLAMA_MODEL`). Add `--local-only` to enforce a strict on-device Ollama/LM Studio privacy lock.
-
-Dissentry supports **both `stdio` and `Streamable HTTP`**:
-- **Stdio**: `npx -y dissentry mcp` (zero daemon required)
-- **Streamable HTTP**: automatically available at `http://127.0.0.1:4317/mcp` while `npx dissentry` is running, or headless via `npx -y dissentry mcp --http` (default `http://127.0.0.1:4318/mcp`)
+- **Official MCP Registry**: `io.github.Lihaila/dissentry`
+- **Hosted Cloud MCP (zero install, OAuth 2.1)**: `https://dissentry.lihaila.com/v1/mcp` — connect directly from **Google App (Cloud MCP)**, **Claude**, **Cursor**, **ChatGPT**, or **Qwen Work**, sign in with OpenRouter (or bring your own keys) in the OAuth consent page; keys are AES-256-GCM encrypted inside your Bearer token and never stored in a database.
+- **Local Stdio**: `npx -y dissentry mcp` (zero daemon required; reuses `~/.dissentry/data.json` or env vars; add `--local-only` for strict Ollama/LM Studio privacy lock)
+- **Local Streamable HTTP**: automatically available at `http://127.0.0.1:4317/mcp` while `npx dissentry` is running, or headless via `npx -y dissentry mcp --http` (default `http://127.0.0.1:4318/mcp`)
 
 **Claude Code / Qwen Code (CLI):**
 
 ```bash
-# Claude Code (stdio)
+# Hosted Cloud MCP (OAuth 2.1, zero local setup)
+claude mcp add --transport http dissentry https://dissentry.lihaila.com/v1/mcp
+
+# Claude Code (Local stdio)
 claude mcp add dissentry -- npx -y dissentry mcp
 
-# Qwen Code / Qwen Work (stdio or Streamable HTTP)
+# Qwen Code / Qwen Work (Local stdio or Streamable HTTP)
 qwen mcp add dissentry -- npx -y dissentry mcp
 # or: qwen mcp add --transport http dissentry http://127.0.0.1:4317/mcp
 ```
@@ -125,12 +127,13 @@ For **Qwen Work / Qwen Code** (`~/.qwen/settings.json`) Streamable HTTP mode, us
 
 **Google App (Gemini Desktop — Set up a custom connected app):**
 
-- **Setup method**: `Local MCP`
-- **Server Name**: `Dissentry`
-- **Description**: `Multi-model AI fact-checker & second opinion`
-- **Command**: `npx -y dissentry mcp`
-  *(If Node is installed via `nvm`, macOS GUI apps don't inherit your shell `PATH`: run `npm i -g dissentry` once and use absolute paths, e.g. `/Users/<you>/.nvm/versions/node/<ver>/bin/node /Users/<you>/.nvm/versions/node/<ver>/bin/dissentry mcp`.)*
-- **Sandbox settings**: pick **Customize Sandbox** (or **Full Access**), check **Allow outbound network access**, and add **Read (`R`)** for `~/.dissentry` (plus **Read + Execute (`R` + `X`)** for `~/.nvm` if using `nvm`). *(Press `⌘⇧.` in the macOS folder picker to show hidden dotfiles.)*
+- **Option A — Cloud MCP (easiest, zero install):** Choose **Cloud MCP** and enter URL `https://dissentry.lihaila.com/v1/mcp`, then approve with OpenRouter (or your API keys) in the OAuth prompt.
+- **Option B — Local MCP (uses `~/.dissentry/data.json` & Ollama):**
+  - **Setup method**: `Local MCP`
+  - **Server Name**: `Dissentry`
+  - **Description**: `Multi-model AI fact-checker & second opinion`
+  - **Command**: `npx -y dissentry mcp` *(Using `nvm`? Run `npm i -g dissentry` once and use absolute paths, e.g. `/Users/<you>/.nvm/versions/node/<ver>/bin/node /Users/<you>/.nvm/versions/node/<ver>/bin/dissentry mcp`.)*
+  - **Sandbox settings**: pick **Customize Sandbox** (or **Full Access**), check **Allow outbound network access**, and add **Read (`R`)** for `~/.dissentry` (plus **Read + Execute (`R` + `X`)** for `~/.nvm` if using `nvm`; press `⌘⇧.` in the macOS folder picker to show hidden dotfiles).
 
 **DSH / DeepSeek Harness (`@deepseek-ai/dsh-mcp-client` / `dsh-mcp-center`):**
 

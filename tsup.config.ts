@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     server: 'server/index.ts',
     mcp: 'server/mcp-cli.ts',
+    'cloud-mcp': 'server/cloud-mcp-cli.ts',
   },
   format: ['esm'],
   platform: 'node',
