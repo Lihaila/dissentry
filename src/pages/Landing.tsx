@@ -29,7 +29,7 @@ const MCP_TOOLS: { name: string; desc: TKey }[] = [
   { name: 'dissentry_trust', desc: 'land.mcpToolTrust' },
 ];
 
-type McpTabId = 'claude' | 'json' | 'qwen' | 'dsh' | 'http';
+type McpTabId = 'json' | 'google' | 'claude' | 'qwen' | 'dsh' | 'http';
 
 const MCP_TABS: { id: McpTabId; label: string | TKey; isKey?: boolean; hint: TKey; code: string }[] = [
   {
@@ -44,6 +44,23 @@ const MCP_TABS: { id: McpTabId; label: string | TKey; isKey?: boolean; hint: TKe
     }
   }
 }`,
+  },
+  {
+    id: 'google',
+    label: 'Google App',
+    hint: 'land.mcpHintGoogle',
+    code: `Setup method:  Local MCP
+Server Name:   Dissentry
+Description:   Multi-model AI fact-checker & second opinion
+Command:       npx -y dissentry mcp
+
+# Using nvm on macOS? Run \`npm i -g dissentry\` once, then use absolute paths:
+# /Users/<you>/.nvm/versions/node/<ver>/bin/node /Users/<you>/.nvm/versions/node/<ver>/bin/dissentry mcp
+
+Sandbox settings → Customize Sandbox (press ⌘⇧. to show dotfiles):
+  • ~/.dissentry  → R (Read)
+  • ~/.nvm        → R + X (if using nvm)
+  • Allow outbound network access ✓`,
   },
   {
     id: 'claude',
@@ -393,7 +410,7 @@ export function LandingPage({ initialSection }: { initialSection?: string } = {}
 
                 <div className="mt-4 flex justify-end">
                   <a
-                    href="https://github.com/Lihaila/dissentry#mcp-server-claude-code-cursor-dsh-workbuddy-qwen-work-antigravity"
+                    href="https://github.com/Lihaila/dissentry#mcp-server-google-app-claude-code-cursor-dsh-workbuddy-qwen-work-antigravity"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink transition hover:text-amber-700"

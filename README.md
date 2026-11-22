@@ -44,7 +44,7 @@ https://github.com/user-attachments/assets/0a38fb4d-9615-4770-bb28-a1867de8e7e5
 - **Share as image**: turn any answer and its notes into a polished card for X, in one click.
 - **Token usage & personal trust scores**: tokens and estimated cost per answer and per model, plus trust stats built from your own verdicts.
 - **Local vs. Cloud clarity & Local-only thread lock**: every model is clearly labeled **Local** or **Cloud**, the composer shows before sending whether a post stays on your device or shares context with cloud checkers, and a 1-click **Local only** lock enforces a hard privacy boundary across the entire thread (including replies, quotes, and checks).
-- **Built-in MCP Server (stdio & Streamable HTTP)**: expose Dissentry's multi-model fact-checker (`dissentry_check`, `dissentry_ask`, `dissentry_list_models`, `dissentry_trust`) directly inside **Claude Code**, **Cursor**, **Claude Desktop**, **Antigravity**, **DSH (DeepSeek Harness)**, **WorkBuddy**, and **Qwen Work / Qwen Code** — reusing your `~/.dissentry/data.json` models, keys, and proxies with zero duplicate setup.
+- **Built-in MCP Server (stdio & Streamable HTTP)**: expose Dissentry's multi-model fact-checker (`dissentry_check`, `dissentry_ask`, `dissentry_list_models`, `dissentry_trust`) directly inside **Google App (Gemini Desktop)**, **Claude Code**, **Cursor**, **Claude Desktop**, **Antigravity**, **DSH (DeepSeek Harness)**, **WorkBuddy**, and **Qwen Work / Qwen Code** — reusing your `~/.dissentry/data.json` models, keys, and proxies with zero duplicate setup.
 - **Private & persistent by design**: keys, chats, attachments, generated media, and your custom profile avatar stay on your device. Running `npx dissentry` automatically syncs to `~/.dissentry/data.json` (`0600` owner-only permissions) and auto-restores if browser data is cleared; the hosted web app requests browser persistent storage and supports 1-click local JSON file auto-backup. No accounts, no telemetry.
 - **Four languages**: English, 简体中文, 日本語, 한국어.
 - **Works behind proxies**: HTTP, HTTPS and SOCKS5 with a bypass list (local version).
@@ -85,7 +85,7 @@ docker build -t dissentry . && docker run -p 4317:4317 dissentry
 
 Inside Docker, reach Ollama on the host at `http://host.docker.internal:11434/v1`.
 
-## MCP Server (Claude Code, Cursor, DSH, WorkBuddy, Qwen Work, Antigravity)
+## MCP Server (Google App, Claude Code, Cursor, DSH, WorkBuddy, Qwen Work, Antigravity)
 
 Run Dissentry as a local **Model Context Protocol (MCP)** server so your coding agent or desktop AI can call your other models to adversarially fact-check plans, code, and claims (`dissentry_check`), ask other model families for a second opinion (`dissentry_ask`), list configured models (`dissentry_list_models`), and read your personal trust stats (`dissentry_trust`).
 
@@ -122,6 +122,15 @@ qwen mcp add dissentry -- npx -y dissentry mcp
 > **Tip (fastest startup & offline-ready):** Run `npm i -g dissentry` once, then use `"command": "dissentry", "args": ["mcp"]` (or the absolute paths to `node` and `dissentry` if you use `nvm`).
 
 For **Qwen Work / Qwen Code** (`~/.qwen/settings.json`) Streamable HTTP mode, use `"httpUrl": "http://127.0.0.1:4317/mcp"`. For **WorkBuddy** and **Antigravity** Streamable HTTP mode, use `"url": "http://127.0.0.1:4317/mcp"`.
+
+**Google App (Gemini Desktop — Set up a custom connected app):**
+
+- **Setup method**: `Local MCP`
+- **Server Name**: `Dissentry`
+- **Description**: `Multi-model AI fact-checker & second opinion`
+- **Command**: `npx -y dissentry mcp`
+  *(If Node is installed via `nvm`, macOS GUI apps don't inherit your shell `PATH`: run `npm i -g dissentry` once and use absolute paths, e.g. `/Users/<you>/.nvm/versions/node/<ver>/bin/node /Users/<you>/.nvm/versions/node/<ver>/bin/dissentry mcp`.)*
+- **Sandbox settings**: pick **Customize Sandbox** (or **Full Access**), check **Allow outbound network access**, and add **Read (`R`)** for `~/.dissentry` (plus **Read + Execute (`R` + `X`)** for `~/.nvm` if using `nvm`). *(Press `⌘⇧.` in the macOS folder picker to show hidden dotfiles.)*
 
 **DSH / DeepSeek Harness (`@deepseek-ai/dsh-mcp-client` / `dsh-mcp-center`):**
 
