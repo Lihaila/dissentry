@@ -78,15 +78,21 @@ describe('shared thread memory', () => {
     expect(notes.a1?.map((n) => n.id)).toEqual(['n1', 'n3']);
   });
 
-  it('exports and restores local userName and userAvatar', async () => {
-    updateSettings({ userName: 'Wade', userAvatar: 'data:image/png;base64,AAAA' });
+  it('exports and restores local userName, userAvatar, and display theme settings', async () => {
+    updateSettings({ userName: 'Wade', userAvatar: 'data:image/png;base64,AAAA', themeBg: 'dim', themeAccent: 'violet', themeFontSize: 4 });
     const dump = await exportAll(false);
     expect(dump.userProfile).toEqual({ userName: 'Wade', userAvatar: 'data:image/png;base64,AAAA' });
-    updateSettings({ userName: '', userAvatar: '' });
+    expect(dump.settings.themeBg).toBe('dim');
+    expect(dump.settings.themeAccent).toBe('violet');
+    expect(dump.settings.themeFontSize).toBe(4);
+    updateSettings({ userName: '', userAvatar: '', themeBg: 'light', themeAccent: 'ink', themeFontSize: 2 });
     await importAll(dump);
     expect(getSettings().userName).toBe('Wade');
     expect(getSettings().userAvatar).toBe('data:image/png;base64,AAAA');
-    updateSettings({ userName: '', userAvatar: '' });
+    expect(getSettings().themeBg).toBe('dim');
+    expect(getSettings().themeAccent).toBe('violet');
+    expect(getSettings().themeFontSize).toBe(4);
+    updateSettings({ userName: '', userAvatar: '', themeBg: 'light', themeAccent: 'ink', themeFontSize: 2 });
   });
 
   it('enforces local-only thread privacy so cloud models and cloud checkers are never invoked', async () => {

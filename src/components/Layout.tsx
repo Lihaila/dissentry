@@ -1,10 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowLeft, BarChart3, Bot, Check, Code2, Home, PanelLeft, PenSquare, Plus, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Bot, Check, Code2, Home, Palette, PanelLeft, PenSquare, Plus, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { db } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
-import { closeThreadsDrawer, openNewThread, openThreadsDrawer, threadTitle, useThreadsDrawerOpen } from '../lib/ui';
+import { closeThreadsDrawer, openDisplay, openNewThread, openThreadsDrawer, threadTitle, useThreadsDrawerOpen } from '../lib/ui';
 import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
 import { profileKind } from '../lib/providers';
@@ -12,6 +12,7 @@ import { deletePostTree } from '../lib/store';
 import { timeAgo } from '../lib/time';
 import { Avatar } from './Avatar';
 import { ConfirmHost } from './ConfirmHost';
+import { DisplayDialog } from './DisplayPanel';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { LihaiLaBrandLink, LihaiLaFamilyCard, LihaiLaMark, lihailaUrl } from './LihaiLa';
 import { Logo } from './Logo';
@@ -61,19 +62,28 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
 
         <button onClick={openNewThread}
-          className="mb-5 flex items-center justify-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[14.5px] font-semibold text-white shadow-sm shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[.98]">
+          className="btn-accent mb-5 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[14.5px] font-semibold shadow-sm shadow-slate-900/15 transition active:scale-[.98]">
           <PenSquare size={17} />
           <span>{t('nav.newThread')}</span>
-          <kbd className="ml-0.5 hidden rounded bg-white/15 px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-white/80 lg:inline">N</kbd>
+          <kbd className="ml-0.5 hidden rounded bg-black/15 px-1.5 py-0.5 font-sans text-[10.5px] font-medium opacity-80 lg:inline">N</kbd>
         </button>
 
         <nav className="space-y-0.5">
           {NAV.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${active(href) ? 'bg-slate-200/70 font-semibold text-ink' : 'text-slate-600 hover:bg-slate-200/45 hover:text-ink'}`}>
-              <Icon size={19} strokeWidth={active(href) ? 2.3 : 1.8} />{label}
+              className={`nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${active(href) ? 'bg-slate-200/70 font-semibold text-ink' : 'text-slate-600 hover:bg-slate-200/45 hover:text-ink'}`}>
+              <Icon size={19} strokeWidth={active(href) ? 2.3 : 1.8} className={active(href) ? 'text-accent' : ''} />{label}
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={openDisplay}
+            className="nav-link flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 transition hover:bg-slate-200/45 hover:text-ink"
+          >
+            <Palette size={19} strokeWidth={1.8} />
+            <span className="flex-1 text-left">{t('nav.display')}</span>
+            <span className="dot-accent h-2.5 w-2.5 rounded-full ring-2 ring-slate-200/80" aria-hidden />
+          </button>
         </nav>
 
         <RecentThreads />
@@ -101,7 +111,18 @@ export function Layout({ children }: { children: ReactNode }) {
             <span aria-hidden className="h-3.5 w-px bg-slate-200" />
             <Link href="/"><Logo size={23} /></Link>
           </div>
-          <LanguageSwitcher compact />
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={openDisplay}
+              aria-label={t('nav.display')}
+              title={t('nav.display')}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink"
+            >
+              <Palette size={17} />
+            </button>
+            <LanguageSwitcher compact />
+          </div>
         </div>
         {children}
       </main>
@@ -110,17 +131,18 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-slate-200/90 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
         {NAV.map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href} aria-label={label} className={`p-3.5 transition ${active(href) ? 'text-ink' : 'text-slate-400 hover:text-slate-600'}`}>
+          <Link key={href} href={href} aria-label={label} className={`p-3.5 transition ${active(href) ? 'text-accent' : 'text-slate-400 hover:text-slate-600'}`}>
             <Icon size={22} strokeWidth={active(href) ? 2.4 : 1.8} />
           </Link>
         ))}
       </nav>
       <button onClick={openNewThread} aria-label={t('nav.newThread')}
-        className="fixed bottom-20 right-5 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-ink text-white shadow-lg shadow-slate-900/25 transition active:scale-95 md:hidden">
+        className="btn-accent fixed bottom-20 right-5 z-30 flex h-13 w-13 items-center justify-center rounded-full shadow-lg shadow-slate-900/25 transition active:scale-95 md:hidden">
         <Plus size={24} />
       </button>
       <MobileThreadsDrawer />
       <NewThreadDialog />
+      <DisplayDialog />
       <ConfirmHost />
     </div>
   );
@@ -146,7 +168,7 @@ function RecentThreads() {
           return (
             <div key={r.id} className={`group flex items-center rounded-lg transition ${isActive ? 'bg-slate-200/70 font-medium text-ink' : 'text-slate-600 hover:bg-slate-200/45 hover:text-ink'}`}>
               <Link href={`/post/${r.id}`} className="flex min-w-0 flex-1 items-center gap-2 truncate px-3 py-1.5 text-[13px]">
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full transition ${isActive ? 'bg-amber-500' : 'bg-slate-300 group-hover:bg-slate-400'}`} />
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full transition ${isActive ? 'dot-accent' : 'bg-slate-300 group-hover:bg-slate-400'}`} />
                 <span className="truncate">{threadTitle(r.text, 48, r.attachments?.[0]?.name)}</span>
               </Link>
               <button onClick={() => void remove(r.id)} aria-label={t('post.deleteThreadTitle')} title={t('post.deleteThreadTitle')}
@@ -169,10 +191,10 @@ function RightPanel() {
 
   return (
     <aside className="sticky top-0 hidden h-screen w-[328px] shrink-0 space-y-4 overflow-y-auto px-3 py-5 xl:block">
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs shadow-slate-900/[0.03]">
+      <section className="surface-card rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs shadow-slate-900/[0.03]">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[14.5px] font-bold tracking-tight text-ink">{t('panel.yourModels')}</h2>
-          <Link href="/models" className="text-[12.5px] font-semibold text-sky-600 transition hover:text-sky-700 hover:underline">{t('panel.manage')}</Link>
+          <Link href="/models" className="text-[12.5px] font-semibold text-accent transition hover:underline">{t('panel.manage')}</Link>
         </div>
         {enabled.length === 0 && <p className="text-[13px] leading-relaxed text-slate-500">{t('panel.noModels')}</p>}
         <ul className="space-y-1">
@@ -217,7 +239,7 @@ function RightPanel() {
           <Plus size={14} /> {t('panel.addModel')}
         </Link>
       </section>
-      <section className="rounded-2xl border border-slate-200/70 bg-white/75 p-4">
+      <section className="surface-card rounded-2xl border border-slate-200/70 bg-white/75 p-4">
         <h2 className="mb-3 text-[14.5px] font-bold tracking-tight text-ink">{t('panel.howTitle')}</h2>
         <ol className="space-y-2.5 text-[13px] leading-relaxed text-slate-600">
           {(['panel.how1', 'panel.how2', 'panel.how3'] as const).map((k, i) => (
@@ -270,7 +292,7 @@ function MobileThreadsDrawer() {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-[min(320px,84vw)] flex-col border-r border-slate-200/80 bg-white shadow-2xl"
+        className="surface-card flex h-full w-[min(320px,84vw)] flex-col border-r border-slate-200/80 bg-white shadow-2xl"
       >
         <div className="flex h-12 items-center justify-between border-b border-slate-200/80 px-4">
           <span className="text-[15px] font-bold tracking-tight text-ink">{t('layout.recent')}</span>
@@ -288,7 +310,7 @@ function MobileThreadsDrawer() {
           <button
             type="button"
             onClick={openNewThread}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[.98]"
+            className="btn-accent flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-semibold shadow-sm shadow-slate-900/15 transition active:scale-[.98]"
           >
             <PenSquare size={16} />
             <span>{t('nav.newThread')}</span>
@@ -361,7 +383,7 @@ export function PageHeader({ title, sub, back }: { title: string; sub?: string; 
         </button>
       )}
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[18px] font-bold leading-tight tracking-tight text-ink">{title}</h1>
+        <h1 className="page-title truncate font-bold leading-tight tracking-tight text-ink">{title}</h1>
         {sub && <p className="truncate text-[12.5px] text-slate-500">{sub}</p>}
       </div>
       {threadCount > 0 && (

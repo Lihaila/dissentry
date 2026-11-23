@@ -18,8 +18,8 @@ export function Avatar({ profile, size = 40, user, avatarUrl }: { profile?: Prof
       );
     }
     return (
-      <div className="flex shrink-0 select-none items-center justify-center rounded-full bg-sky-500 font-semibold text-white"
-        style={{ width: size, height: size, fontSize: size * 0.4 }} aria-hidden>
+      <div className="flex shrink-0 select-none items-center justify-center rounded-full font-semibold"
+        style={{ width: size, height: size, fontSize: size * 0.4, backgroundColor: 'var(--accent)', color: 'var(--accent-fg)' }} aria-hidden>
         {(user.trim()[0] ?? 'Y').toUpperCase()}
       </div>
     );
@@ -27,7 +27,7 @@ export function Avatar({ profile, size = 40, user, avatarUrl }: { profile?: Prof
   const logo = profile ? logoFor(profile) : undefined;
   if (logo) {
     return (
-      <div className="flex shrink-0 select-none items-center justify-center rounded-full border border-slate-200 bg-white"
+      <div className="logo-chip flex shrink-0 select-none items-center justify-center rounded-full border border-slate-200 bg-white"
         style={{ width: size, height: size }} aria-hidden>
         <img src={logo} alt="" draggable={false} style={{ width: size * 0.58, height: size * 0.58 }} />
       </div>

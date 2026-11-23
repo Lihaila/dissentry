@@ -35,14 +35,14 @@ export function OpenRouterAccountCard({ variant }: { variant: 'models' | 'settin
 
     return (
       <div className={variant === 'models'
-        ? 'border-b border-slate-200/80 bg-gradient-to-r from-emerald-50/75 via-white to-white px-4 py-4'
+        ? 'border-b border-slate-200/80 bg-gradient-to-r from-emerald-50/75 via-transparent to-transparent px-4 py-4'
         : 'border-b border-slate-200/80 px-4 py-5'}>
         {variant === 'settings' && <h2 className="mb-3 text-[15px] font-bold text-ink">{t('or.settingsTitle')}</h2>}
         <div className={variant === 'settings'
           ? 'flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/45 p-3.5'
           : 'flex flex-wrap items-center gap-x-4 gap-y-3'}>
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-white shadow-2xs">
+            <span className="logo-chip mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-white shadow-2xs">
               <img src={presetLogo('openrouter')} alt="" className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
@@ -58,7 +58,7 @@ export function OpenRouterAccountCard({ variant }: { variant: 'models' | 'settin
                 href="https://openrouter.ai/keys"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-sky-600 hover:underline"
+                className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline"
               >
                 {t('or.manageKeys')}
                 <ExternalLink size={11} />
@@ -68,7 +68,7 @@ export function OpenRouterAccountCard({ variant }: { variant: 'models' | 'settin
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Link
               href="/auth/openrouter"
-              className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-[13px] font-semibold text-white shadow-2xs transition hover:bg-slate-800 active:scale-[.98]"
+              className="btn-accent inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold shadow-2xs transition active:scale-[.98]"
             >
               <Plus size={14} />
               {orModels.length > 0 ? t('or.addModels') : t('or.chooseModels')}
@@ -100,7 +100,7 @@ export function OpenRouterAccountCard({ variant }: { variant: 'models' | 'settin
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200/80 bg-gradient-to-r from-indigo-50/70 to-white px-4 py-4">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200/80 bg-gradient-to-r from-indigo-50/70 to-transparent px-4 py-4">
       <div className="min-w-0 flex-1">
         <p className="text-[14.5px] font-semibold text-ink">{t('or.cardTitle')}</p>
         <p className="text-[12.5px] text-slate-500">{t('or.pitch')}</p>

@@ -137,14 +137,14 @@ export function PostCard({ post, profiles, lineBelow, replyingTo, focused, onRep
 
         <div
           ref={bodyRef}
-          className={`mt-1 text-slate-800 ${focused ? 'text-[15.5px]' : ''} ${
+          className={`mt-1 text-slate-800 ${focused ? 'post-focused' : ''} ${
             collapsible && overflows && !expanded
               ? 'max-h-[160px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]'
               : ''
           }`}
         >
           {isUser
-            ? (post.text ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{highlightMentions(post.text)}</p> : null)
+            ? (post.text ? <p className="post-body-text whitespace-pre-wrap text-ink">{highlightMentions(post.text)}</p> : null)
             : post.text
               ? <Markdown text={post.status === 'done' ? markClaims(post.text, notes) : post.text} streaming={post.status === 'streaming'} />
               : post.status === 'streaming' && !post.deepThink && (
@@ -164,7 +164,7 @@ export function PostCard({ post, profiles, lineBelow, replyingTo, focused, onRep
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
-            className="mt-1 text-[13.5px] font-medium text-sky-600 transition hover:text-sky-700 hover:underline"
+            className="mt-1 text-[13.5px] font-medium text-accent transition hover:underline"
           >
             {expanded ? t('post.showLess') : t('post.showMore')}
           </button>
@@ -311,7 +311,7 @@ export function QuotedHeader({ post, profiles, userName }: { post: Post; profile
 
 function highlightMentions(text: string) {
   return text.split(/(@[a-z0-9][a-z0-9_.-]*)/gi).map((part, i) =>
-    part.startsWith('@') ? <span key={i} className="rounded bg-sky-50 px-1 py-0.5 font-medium text-sky-700">{part}</span> : part);
+    part.startsWith('@') ? <span key={i} className="pill-accent rounded border px-1 py-0.5 font-medium">{part}</span> : part);
 }
 
 function UsageLine({ post, checks, profiles }: { post: Post; checks: CheckRow[]; profiles: Map<string, Profile> }) {

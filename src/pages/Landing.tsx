@@ -180,7 +180,7 @@ export function LandingPage({ initialSection }: { initialSection?: string } = {}
   }, [videoOpen]);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="theme-light-lock min-h-screen bg-white text-slate-900">
       {/* Nav — matches Lihai La's product header pattern (Lihai La | Product) */}
       <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-5">

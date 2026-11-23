@@ -53,7 +53,7 @@ export function NoteCard({ note, profiles, author }: { note: Note; profiles: Map
   }
 
   return (
-    <div className={`mt-3 overflow-hidden rounded-2xl border text-[14px] shadow-2xs transition ${dismissed ? 'border-slate-200 bg-slate-50/60 opacity-75' : th.card}`}>
+    <div className={`note-card mt-3 overflow-hidden rounded-2xl border text-[14px] shadow-2xs transition ${dismissed ? 'note-dismissed border-slate-200 bg-slate-50/60 opacity-75' : th.card}`}>
       <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 border-b px-3.5 py-2.5 ${dismissed ? 'border-slate-200/70 bg-slate-100/50' : th.head}`}>
         <span className="flex -space-x-1.5">
           {all.slice(0, 4).map((p) => (
@@ -99,7 +99,7 @@ export function NoteCard({ note, profiles, author }: { note: Note; profiles: Map
         )}
         {note.responsePostId && (
           <Link href={`/post/${note.responsePostId}`} onClick={(e) => e.stopPropagation()}
-            className="ml-auto rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-sky-600 transition hover:bg-sky-50 hover:text-sky-700">
+            className="ml-auto rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-accent transition hover:bg-slate-100/70 hover:underline">
             {t('note.seeResponse', { handle: author?.handle ?? '?' })}
           </Link>
         )}

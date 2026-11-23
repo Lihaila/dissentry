@@ -68,7 +68,7 @@ export function HomePage() {
         </div>
       )}
       {roots && roots.length >= limit && (
-        <button onClick={() => setLimit((l) => l + PAGE)} className="w-full py-4 text-[14px] font-medium text-sky-600 hover:bg-slate-50">{t('home.more')}</button>
+        <button onClick={() => setLimit((l) => l + PAGE)} className="w-full py-4 text-[14px] font-medium text-accent hover:bg-slate-50">{t('home.more')}</button>
       )}
     </>
   );
@@ -83,7 +83,7 @@ function Welcome() {
     <div className="px-6 pb-12 pt-10 text-center sm:px-10">
       <div className="mx-auto mb-7 flex w-fit -space-x-2.5">
         {HERO_LOGOS.map((id, i) => (
-          <span key={id} className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm ring-4 ring-white"
+          <span key={id} className="logo-chip flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm ring-4 ring-white"
             style={{ transform: `translateY(${i % 2 ? 6 : 0}px)` }}>
             <img src={presetLogo(id)} alt="" className="h-6 w-6" />
           </span>
@@ -95,7 +95,7 @@ function Welcome() {
       <div className="mx-auto mt-8 grid max-w-lg gap-3 text-left sm:grid-cols-3">
         {(['welcome.step1', 'welcome.step2', 'welcome.step3'] as const).map((k, i) => (
           <div key={k} className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3.5">
-            <div className="mb-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[12px] font-bold text-white">{i + 1}</div>
+            <div className="btn-accent mb-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold">{i + 1}</div>
             <p className="text-[13.5px] leading-snug text-slate-700">{t(k)}</p>
           </div>
         ))}
@@ -106,7 +106,7 @@ function Welcome() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-800 ring-1 ring-emerald-200/80">
               <Check size={14} strokeWidth={2.8} /> {t('or.connected')}
             </span>
-            <Link href="/auth/openrouter" className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3 text-[15px] font-semibold text-white shadow-sm shadow-slate-900/10 transition hover:bg-slate-800 active:scale-[.98]">
+            <Link href="/auth/openrouter" className="btn-accent inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold shadow-sm shadow-slate-900/10 transition active:scale-[.98]">
               {t('or.chooseModels')}
             </Link>
           </>

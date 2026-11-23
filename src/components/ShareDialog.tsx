@@ -92,9 +92,9 @@ export function ShareDialog({ post, profiles, onClose }: { post: Post; profiles:
 
   const btn = 'flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[14px] font-semibold transition disabled:opacity-50';
   return (
-    <div className="animate-backdrop fixed inset-0 z-50 flex cursor-default items-start justify-center overflow-y-auto bg-slate-900/40 p-3 py-[5vh] backdrop-blur-[3px]"
+    <div className="modal-backdrop animate-backdrop fixed inset-0 z-50 flex cursor-default items-start justify-center overflow-y-auto bg-slate-900/40 p-3 py-[5vh] backdrop-blur-[3px]"
       onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" className="animate-modal w-full max-w-[600px] rounded-3xl bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/90" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" className="surface-card animate-modal w-full max-w-[600px] rounded-3xl bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/90" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink" aria-label={t('common.close')}>
             <X size={17} />
@@ -129,7 +129,7 @@ export function ShareDialog({ post, profiles, onClose }: { post: Post; profiles:
           {error && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[13px] text-red-700">{error}</p>}
 
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <button onClick={() => void onPostX()} disabled={!blob} className={`${btn} col-span-2 bg-ink text-white hover:bg-slate-800 sm:col-span-1`}>
+            <button onClick={() => void onPostX()} disabled={!blob} className={`${btn} btn-accent col-span-2 sm:col-span-1`}>
               <XLogo /> {t('share.postX')}
             </button>
             <button onClick={() => void onCopy()} disabled={!blob} className={`${btn} border border-slate-200 hover:bg-slate-50`}>

@@ -17,7 +17,7 @@ export function TrustPage() {
     <>
       <PageHeader title={t('trust.title')} sub={t('trust.sub')} />
       {totals && totals.checked > 0 && (
-        <div className="border-b border-slate-200/80 bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white px-5 py-6">
+        <div className="border-b border-slate-200/80 bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-transparent px-5 py-6">
           <p className="text-[42px] font-extrabold leading-none tracking-tight tabular-nums text-ink">{totals.corrected}</p>
           <p className="mt-2 max-w-md text-[14px] leading-relaxed text-slate-600">{t('trust.summary', { n: totals.checked })}</p>
         </div>

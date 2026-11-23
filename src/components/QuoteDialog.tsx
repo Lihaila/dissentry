@@ -35,14 +35,14 @@ export function QuoteDialog({ post, profiles, onClose }: { post: Post; profiles:
 
   return (
     <div
-      className="animate-backdrop fixed inset-0 z-50 flex cursor-default items-start justify-center overflow-y-auto bg-slate-900/35 p-3 pb-16 pt-[6vh] backdrop-blur-[3px] sm:pt-[8vh]"
+      className="modal-backdrop animate-backdrop fixed inset-0 z-50 flex cursor-default items-start justify-center overflow-y-auto bg-slate-900/35 p-3 pb-16 pt-[6vh] backdrop-blur-[3px] sm:pt-[8vh]"
       onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t('quote.title')}
-        className="animate-modal w-full max-w-[600px] rounded-3xl bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/90"
+        className="surface-card animate-modal w-full max-w-[600px] rounded-3xl bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/90"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">

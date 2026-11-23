@@ -1,7 +1,8 @@
-import { Camera, Check, FolderSync, HardDrive, Loader2, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Camera, Check, FolderSync, HardDrive, Loader2, Palette, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { Avatar } from '../components/Avatar';
+import { DisplayPanel } from '../components/DisplayPanel';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/Layout';
 import { lihailaUrl } from '../components/LihaiLa';
@@ -135,6 +136,16 @@ export function SettingsPage() {
             <div className="rounded-xl border border-slate-200 px-3 py-1"><LanguageSwitcher /></div>
           </div>
         </div>
+      </div>
+      <div className={section}>
+        <div className="mb-3.5">
+          <h2 className="inline-flex items-center gap-1.5 text-[15px] font-bold text-ink">
+            <Palette size={16} className="text-accent" />
+            <span>{t('display.title')}</span>
+          </h2>
+          <p className="mt-1 text-[13px] text-slate-500">{t('display.sub')}</p>
+        </div>
+        <DisplayPanel />
       </div>
       <OpenRouterAccountCard variant="settings" />
       <label className={`${section} flex cursor-pointer items-start gap-3`}>

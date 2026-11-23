@@ -134,7 +134,7 @@ export function OpenRouterCallbackPage() {
           <div className="mb-4 flex items-center gap-2.5 rounded-2xl bg-emerald-50 px-4 py-3 text-[14px] text-emerald-800"><Check size={18} />{t('or.connected')}</div>
           <p className="text-[14.5px] leading-relaxed text-slate-600">{error}</p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => void loadModels()} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-slate-800">
+            <button type="button" onClick={() => void loadModels()} className="btn-accent inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold">
               <RefreshCw size={14} /> {t('or.retry')}
             </button>
             <Link href="/models" className="rounded-full border border-slate-200 px-4 py-2.5 text-[14px] font-semibold text-ink hover:bg-slate-50">{t('nav.models')}</Link>
@@ -153,7 +153,7 @@ export function OpenRouterCallbackPage() {
               type="button"
               onClick={() => void add()}
               disabled={saving || selectedCount === 0}
-              className="shrink-0 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-white shadow-xs transition hover:bg-slate-800 active:scale-[.98] disabled:bg-slate-300"
+              className="btn-accent shrink-0 rounded-full px-5 py-2.5 text-[14px] font-semibold shadow-xs transition active:scale-[.98]"
             >
               {t('or.add', { n: selectedCount })}
             </button>
@@ -190,7 +190,7 @@ export function OpenRouterCallbackPage() {
               type="button"
               onClick={() => void add()}
               disabled={saving || selectedCount === 0}
-              className="rounded-full bg-ink px-6 py-2.5 text-[14.5px] font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300"
+              className="btn-accent rounded-full px-6 py-2.5 text-[14.5px] font-semibold transition active:scale-[.98]"
             >
               {t('or.add', { n: selectedCount })}
             </button>

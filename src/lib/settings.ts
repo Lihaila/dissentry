@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { ThemeAccent, ThemeBg, ThemeFontSize } from './theme';
 
 export interface Settings {
   userName: string;
@@ -15,10 +16,28 @@ export interface Settings {
   proxyUrl: string;
   /** Hosts that skip the custom proxy, e.g. ".aliyuncs.com, api.deepseek.com". */
   proxyBypass: string;
+  /** Background display theme: Default light, Warm paper, X-style Dim, or OLED Lights out. */
+  themeBg: ThemeBg;
+  /** Accent highlight color used for primary buttons, links, mentions, and active indicators. */
+  themeAccent: ThemeAccent;
+  /** Font scale step (0 = extra small .. 4 = extra large, 2 = default). */
+  themeFontSize: ThemeFontSize;
 }
 
 const KEY = 'dissentry.settings';
-const DEFAULTS: Settings = { userName: '', userAvatar: '', autoCheck: true, webSearch: true, deepThink: false, proxyMode: 'system', proxyUrl: '', proxyBypass: '' };
+const DEFAULTS: Settings = {
+  userName: '',
+  userAvatar: '',
+  autoCheck: true,
+  webSearch: true,
+  deepThink: false,
+  proxyMode: 'system',
+  proxyUrl: '',
+  proxyBypass: '',
+  themeBg: 'light',
+  themeAccent: 'ink',
+  themeFontSize: 2,
+};
 const listeners = new Set<() => void>();
 
 let current: Settings = (() => {
@@ -26,6 +45,11 @@ let current: Settings = (() => {
     const saved = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') };
     // Older versions stored the English default; treat it as "not set" so it follows the UI language.
     if (saved.userName === 'You') saved.userName = '';
+    // Drop unknown/corrupted display values so the theme and Display panel always see a valid preset.
+    // (Inline lists: importing validators from ./theme would create an init-order cycle.)
+    if (!['light', 'paper', 'dim', 'dark'].includes(saved.themeBg)) saved.themeBg = DEFAULTS.themeBg;
+    if (!['ink', 'blue', 'amber', 'rose', 'violet', 'orange', 'emerald'].includes(saved.themeAccent)) saved.themeAccent = DEFAULTS.themeAccent;
+    if (![0, 1, 2, 3, 4].includes(saved.themeFontSize)) saved.themeFontSize = DEFAULTS.themeFontSize;
     return saved;
   } catch { return DEFAULTS; }
 })();

@@ -56,7 +56,7 @@ export function LihaiLaFamilyCard() {
     { label: lang === 'zh' ? '织课' : 'CourseWeaver', href: lang === 'zh' ? 'https://courseweaver.app/' : 'https://courseweaver.app/?lang=en' },
   ];
   return (
-    <section className="rounded-2xl border border-slate-200/70 bg-white/75 p-4">
+    <section className="surface-card rounded-2xl border border-slate-200/70 bg-white/75 p-4">
       <div className="mb-2.5 flex items-center justify-between gap-2">
         <a href={lihailaUrl(lang)} className="inline-flex items-center gap-1.5 text-[13.5px] font-bold tracking-tight text-ink transition hover:text-sky-700">
           <LihaiLaMark size={16} />

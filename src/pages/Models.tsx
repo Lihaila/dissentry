@@ -57,7 +57,7 @@ export function ModelsPage() {
       <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3">
         <p className="text-[13px] text-slate-500">{t('models.optionsHint')}</p>
         <button onClick={() => { setEditing(blank('anthropic', (profiles ?? []).map((p) => p.handle))); setIsNew(true); }}
-          className="shrink-0 rounded-full bg-ink px-4 py-2 text-[13.5px] font-semibold text-white hover:bg-slate-800">{t('models.add')}</button>
+          className="btn-accent shrink-0 rounded-full px-4 py-2 text-[13.5px] font-semibold transition active:scale-[.98]">{t('models.add')}</button>
       </div>
       {profiles?.length === 0 && !editing && <div className="p-6 text-[14.5px] leading-relaxed text-slate-500">{t('models.empty')}</div>}
       {editing && isNew && <Editor value={editing} isNew taken={(profiles ?? []).map((p) => p.handle)} onDone={() => setEditing(null)} />}
@@ -331,7 +331,7 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
       <Field label={preset.needsKey ? t('editor.key') : t('editor.keyOptional')}>
         <input className={input} type="password" autoComplete="off" value={p.apiKey}
           placeholder={preset.needsKey ? t('editor.keyPlaceholder') : t('editor.keyLocal')} onChange={(e) => { set({ apiKey: e.target.value.trim() }); setFetchErr(''); }} />
-        {preset.keyUrl && <a href={preset.keyUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12px] font-medium text-sky-600 hover:underline">{t('editor.getKey')}</a>}
+        {preset.keyUrl && <a href={preset.keyUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12px] font-medium text-accent hover:underline">{t('editor.getKey')}</a>}
       </Field>
       <div>
         <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-600">{t('editor.model')}</span>
@@ -398,7 +398,7 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
                 <button
                   type="button"
                   onClick={() => setCat('all')}
-                  className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold transition ${cat === 'all' ? 'bg-ink text-white' : 'text-slate-600 hover:bg-slate-200/60'}`}
+                  className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold transition ${cat === 'all' ? 'btn-accent' : 'text-slate-600 hover:bg-slate-200/60'}`}
                 >
                   {t('usage.range.all')}
                 </button>
@@ -407,7 +407,7 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
                     key={k}
                     type="button"
                     onClick={() => setCat(k)}
-                    className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold transition ${cat === k ? 'bg-ink text-white' : 'text-slate-600 hover:bg-slate-200/60'}`}
+                    className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold transition ${cat === k ? 'btn-accent' : 'text-slate-600 hover:bg-slate-200/60'}`}
                   >
                     {t(`kind.${k}`)} ({catCounts[k]})
                   </button>
@@ -464,7 +464,7 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
                 onClick={() => set({ kind: k, ...(k !== 'chat' ? { isChecker: false } : {}) })}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition ${
                   active
-                    ? 'border-ink bg-ink text-white shadow-2xs'
+                    ? 'btn-accent border-transparent shadow-2xs'
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-ink'
                 }`}
               >
@@ -541,7 +541,7 @@ function Editor({ value, isNew, taken, onDone }: { value: Profile; isNew?: boole
         <p className={`rounded-xl px-3 py-2 text-[13px] ${status.kind === 'ok' ? 'bg-emerald-50 text-emerald-800' : status.kind === 'err' ? 'bg-red-50 text-red-800' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>{status.text}</p>
       )}
       <div className="flex flex-wrap gap-2 pt-1">
-        <button disabled={!valid} onClick={() => void save()} className="rounded-full bg-ink px-5 py-2 text-[13.5px] font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300">{t('common.save')}</button>
+        <button disabled={!valid} onClick={() => void save()} className="btn-accent rounded-full px-5 py-2 text-[13.5px] font-semibold transition active:scale-[.98]">{t('common.save')}</button>
         <button disabled={!p.modelId} onClick={() => void test()} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13.5px] font-semibold hover:bg-slate-50 disabled:opacity-50">{t('editor.test')}</button>
         <button onClick={onDone} className="rounded-full px-4 py-2 text-[13.5px] font-semibold text-slate-500 hover:text-ink">{t('common.cancel')}</button>
         {!isNew && <button onClick={() => void remove()} className="ml-auto rounded-full px-3 py-2 text-[13.5px] font-semibold text-red-500 transition hover:bg-red-50">{t('common.remove')}</button>}

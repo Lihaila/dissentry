@@ -3,6 +3,7 @@ import { db } from './db';
 import { OPENROUTER_ACCOUNT_KEY, type OpenRouterAccount } from './openrouter';
 import { getSettings, updateSettings, type Settings } from './settings';
 import { abortAllStreams, abortStream } from './streams';
+import { isThemeAccent, isThemeBg, isThemeFontSize } from './theme';
 import type { Note, Post, Profile } from './types';
 
 let clearHook: (() => Promise<void> | void) | null = null;
@@ -152,6 +153,9 @@ export async function importAll(data: Partial<Awaited<ReturnType<typeof exportAl
     if (data.settings.proxyMode === 'system' || data.settings.proxyMode === 'direct' || data.settings.proxyMode === 'custom') patch.proxyMode = data.settings.proxyMode;
     if (typeof data.settings.proxyUrl === 'string') patch.proxyUrl = data.settings.proxyUrl;
     if (typeof data.settings.proxyBypass === 'string') patch.proxyBypass = data.settings.proxyBypass;
+    if (isThemeBg(data.settings.themeBg)) patch.themeBg = data.settings.themeBg;
+    if (isThemeAccent(data.settings.themeAccent)) patch.themeAccent = data.settings.themeAccent;
+    if (isThemeFontSize(data.settings.themeFontSize)) patch.themeFontSize = data.settings.themeFontSize;
   }
   if (data.userProfile) {
     if (typeof data.userProfile.userName === 'string') patch.userName = data.userProfile.userName;

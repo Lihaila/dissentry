@@ -190,7 +190,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {orAccount ? (
             <Link href="/auth/openrouter" onClick={closeNewThread}
-              className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[13.5px] font-semibold text-white transition hover:bg-slate-800">
+              className="btn-accent inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-semibold transition">
               {t('or.chooseModels')}
             </Link>
           ) : (
@@ -256,7 +256,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
-          className={`relative rounded-2xl border bg-white shadow-xs shadow-slate-900/[0.03] transition-all focus-within:border-slate-300 focus-within:shadow-md focus-within:shadow-slate-900/[0.05] focus-within:ring-4 focus-within:ring-slate-900/[0.03] ${
+          className={`surface-card ring-accent-focus relative rounded-2xl border bg-white shadow-xs shadow-slate-900/[0.03] transition-all ${
             dragging ? 'border-sky-400 ring-4 ring-sky-100' : 'border-slate-200/90'
           }`}
         >
@@ -322,7 +322,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
             onPaste={onPaste}
             onClick={(e) => refreshMenu(text, (e.target as HTMLTextAreaElement).selectionStart)}
             onBlur={() => setTimeout(() => setMenu(null), 150)}
-            className="block max-h-[40vh] w-full resize-none overflow-y-auto bg-transparent px-4 pb-2 pt-3 text-[15.5px] leading-relaxed text-ink outline-none placeholder:text-slate-400"
+            className="composer-input block max-h-[40vh] w-full resize-none overflow-y-auto bg-transparent px-4 pb-2 pt-3 leading-relaxed text-ink outline-none placeholder:text-slate-400"
             style={{ fieldSizing: 'content', minHeight: compact ? 42 : 54 } as React.CSSProperties}
           />
 
@@ -335,13 +335,13 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                   <button key={p.id} type="button" onClick={() => toggleMention(p.handle)} title={`@${p.handle} · ${p.modelId} (${local ? t('route.local') : t('route.cloud')})`}
                     className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border py-[3px] pl-[3px] pr-2.5 text-[12px] font-medium transition active:scale-[.97] ${
                       on
-                        ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
+                        ? 'pill-accent shadow-2xs'
                         : 'border-slate-200/70 bg-slate-50/90 text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 hover:text-ink'
                     }`}>
                     <Avatar profile={p} size={19} />
                     <span>@{p.handle}</span>
                     {local && !on && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title={t('route.local')} />}
-                    {on && <Check size={11} strokeWidth={2.8} className="text-sky-600" />}
+                    {on && <Check size={11} strokeWidth={2.8} />}
                   </button>
                 );
               })}
@@ -349,7 +349,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                 <button type="button" onClick={() => toggleMention('all')} title={t('composer.everyModel')}
                   className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-[4px] text-[12px] font-medium transition active:scale-[.97] ${
                     allMentioned
-                      ? 'border-sky-300/90 bg-sky-50 text-sky-700 shadow-2xs'
+                      ? 'pill-accent shadow-2xs'
                       : 'border-dashed border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-ink'
                   }`}>
                   @all
@@ -441,7 +441,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
                 title={`${label} (⌘/Ctrl + Enter)`}
                 className={`flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full transition ${
                   canSend
-                    ? 'bg-ink text-white shadow-xs hover:bg-slate-800 active:scale-95'
+                    ? 'btn-accent shadow-xs active:scale-95'
                     : 'bg-slate-100 text-slate-400'
                 }`}
               >
@@ -452,7 +452,7 @@ export function Composer({ parentId, quoteOfId, placeholder, autoFocus, implicit
         </div>
 
         {menu && matches.length > 0 && (
-          <ul className="animate-pop absolute z-40 mt-1.5 w-72 overflow-hidden rounded-2xl border border-slate-200/90 bg-white py-1.5 shadow-xl shadow-slate-900/12">
+          <ul className="surface-card animate-pop absolute z-40 mt-1.5 w-72 overflow-hidden rounded-2xl border border-slate-200/90 bg-white py-1.5 shadow-xl shadow-slate-900/12">
             {matches.map((m, i) => {
               const prof = pool.find((p) => p.id === m.id);
               const local = prof ? isLocalProfile(prof) : false;

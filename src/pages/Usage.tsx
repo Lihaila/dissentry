@@ -35,7 +35,8 @@ export function UsagePage() {
       <div className="grid grid-cols-3 gap-3 border-b border-slate-200/80 px-4 py-5">
         {tiles.map(({ r, s }) => (
           <button key={r.id} onClick={() => setRange(r.id)}
-            className={`rounded-2xl border p-3.5 text-left transition ${range === r.id ? 'border-ink bg-white ring-4 ring-slate-100' : 'border-slate-200/80 bg-white hover:border-slate-300'}`}>
+            className={`surface-card rounded-2xl border p-3.5 text-left transition ${range === r.id ? 'bg-white' : 'border-slate-200/80 bg-white hover:border-slate-300'}`}
+            style={range === r.id ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-soft)' } : undefined}>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{t(`usage.range.${r.id}`)}</div>
             <div className="mt-1 text-[24px] font-extrabold tracking-tight text-ink">{fmtTokens(s.total.tokens)}</div>
             <div className="text-[12.5px] text-slate-500">{t('usage.tokens')} · {s.total.tokens ? cost(s.total.cost, s.total.priced) : '$0'}</div>
