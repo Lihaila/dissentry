@@ -1,10 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowLeft, BarChart3, Bot, Check, Code2, Home, Palette, PanelLeft, PenSquare, Plus, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Bot, Check, Code2, Home, PanelLeft, PenSquare, Plus, Settings, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { db } from '../lib/db';
 import { useProfiles } from '../lib/hooks';
-import { closeThreadsDrawer, openDisplay, openNewThread, openThreadsDrawer, threadTitle, useThreadsDrawerOpen } from '../lib/ui';
+import { closeThreadsDrawer, openNewThread, openThreadsDrawer, threadTitle, useThreadsDrawerOpen } from '../lib/ui';
 import { useLang, useT } from '../i18n';
 import { confirmAction } from '../lib/confirm';
 import { profileKind } from '../lib/providers';
@@ -12,7 +12,6 @@ import { deletePostTree } from '../lib/store';
 import { timeAgo } from '../lib/time';
 import { Avatar } from './Avatar';
 import { ConfirmHost } from './ConfirmHost';
-import { DisplayDialog } from './DisplayPanel';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { LihaiLaBrandLink, LihaiLaFamilyCard, LihaiLaMark, lihailaUrl } from './LihaiLa';
 import { Logo } from './Logo';
@@ -75,15 +74,6 @@ export function Layout({ children }: { children: ReactNode }) {
               <Icon size={19} strokeWidth={active(href) ? 2.3 : 1.8} className={active(href) ? 'text-accent' : ''} />{label}
             </Link>
           ))}
-          <button
-            type="button"
-            onClick={openDisplay}
-            className="nav-link flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 transition hover:bg-slate-200/45 hover:text-ink"
-          >
-            <Palette size={19} strokeWidth={1.8} />
-            <span className="flex-1 text-left">{t('nav.display')}</span>
-            <span className="dot-accent h-2.5 w-2.5 rounded-full ring-2 ring-slate-200/80" aria-hidden />
-          </button>
         </nav>
 
         <RecentThreads />
@@ -112,15 +102,6 @@ export function Layout({ children }: { children: ReactNode }) {
             <Link href="/"><Logo size={23} /></Link>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={openDisplay}
-              aria-label={t('nav.display')}
-              title={t('nav.display')}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink"
-            >
-              <Palette size={17} />
-            </button>
             <LanguageSwitcher compact />
           </div>
         </div>
@@ -142,7 +123,6 @@ export function Layout({ children }: { children: ReactNode }) {
       </button>
       <MobileThreadsDrawer />
       <NewThreadDialog />
-      <DisplayDialog />
       <ConfirmHost />
     </div>
   );

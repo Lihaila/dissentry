@@ -1,5 +1,4 @@
-import { Check, Palette, RotateCcw, Sparkles, X } from 'lucide-react';
-import { useEffect } from 'react';
+import { Check, RotateCcw, Sparkles } from 'lucide-react';
 import { useT, type TKey } from '../i18n';
 import { updateSettings, useSettings } from '../lib/settings';
 import {
@@ -14,7 +13,6 @@ import {
   type ThemeBg,
   type ThemeFontSize,
 } from '../lib/theme';
-import { closeDisplay, useDisplayOpen } from '../lib/ui';
 
 const FONT_STEP_KEYS: Record<ThemeFontSize, TKey> = {
   0: 'display.font.0',
@@ -43,9 +41,9 @@ const ACCENT_KEYS: Record<ThemeAccent, TKey> = {
 
 /**
  * X-inspired Display Theme controls: live preview card + 5-step font size track +
- * 7 accent swatches + 4 background theme cards. Shared between DisplayDialog and SettingsPage.
+ * 7 accent swatches + 4 background theme cards. Rendered on the Settings page.
  */
-export function DisplayPanel({ compact = false }: { compact?: boolean }) {
+export function DisplayPanel() {
   const t = useT();
   const s = useSettings();
   const fontSize = s.themeFontSize;
@@ -62,7 +60,7 @@ export function DisplayPanel({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className={compact ? 'space-y-4' : 'space-y-5'}>
+    <div className="space-y-5">
       {/* Live Interactive Dissentry Preview Card */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs transition-colors sm:p-4">
         <div className="flex gap-3">
@@ -292,75 +290,6 @@ export function DisplayPanel({ compact = false }: { compact?: boolean }) {
               </button>
             );
           })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** X-style floating Display modal so users watch the real timeline update behind it in real time. */
-export function DisplayDialog() {
-  const open = useDisplayOpen();
-  const t = useT();
-
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeDisplay();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  if (!open) return null;
-
-  return (
-    <div
-      className="modal-backdrop animate-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/30 p-3 backdrop-blur-[2px] sm:p-5"
-      onClick={(e) => e.target === e.currentTarget && closeDisplay()}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="display-dialog-title"
-        className="surface-card animate-modal my-auto w-full max-w-[540px] rounded-3xl bg-white shadow-2xl shadow-slate-900/25 ring-1 ring-slate-200/90"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-          <button
-            type="button"
-            onClick={closeDisplay}
-            aria-label={t('common.close')}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink"
-          >
-            <X size={17} />
-          </button>
-          <span id="display-dialog-title" className="inline-flex items-center gap-1.5 text-[15px] font-bold tracking-tight text-ink">
-            <Palette size={16} className="text-accent" />
-            {t('display.title')}
-          </span>
-          <span className="w-8" />
-        </div>
-
-        <div className="max-h-[78vh] overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
-          <p className="mb-4 text-center text-[13px] leading-relaxed text-slate-500">
-            {t('display.sub')}
-          </p>
-          <DisplayPanel compact />
-          <div className="mt-5 flex justify-center">
-            <button
-              type="button"
-              onClick={closeDisplay}
-              className="btn-accent rounded-full px-8 py-2.5 text-[14.5px] font-semibold shadow-sm transition active:scale-[.98]"
-            >
-              {t('display.done')}
-            </button>
-          </div>
         </div>
       </div>
     </div>
