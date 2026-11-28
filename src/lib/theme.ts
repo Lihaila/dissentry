@@ -27,14 +27,14 @@ export interface AccentPreset {
 }
 
 export const THEME_BGS: readonly BgPreset[] = [
-  { id: 'light', surface: '#ffffff', border: '#e2e8f0', fg: '#0f172a', metaColor: '#ffffff', dark: false },
+  { id: 'light', surface: '#faf9f5', border: '#e6e3d9', fg: '#141413', metaColor: '#faf9f5', dark: false },
   { id: 'paper', surface: '#fbf8f2', border: '#ddd2c0', fg: '#231d18', metaColor: '#fbf8f2', dark: false },
   { id: 'dim', surface: '#15202b', border: '#38444d', fg: '#f7f9f9', metaColor: '#15202b', dark: true },
   { id: 'dark', surface: '#000000', border: '#2f3336', fg: '#e7e9ea', metaColor: '#000000', dark: true },
 ] as const;
 
 export const THEME_ACCENTS: readonly AccentPreset[] = [
-  { id: 'ink', swatch: '#0f172a', swatchFg: '#ffffff' },
+  { id: 'ink', swatch: '#141413', swatchFg: '#ffffff' },
   { id: 'blue', swatch: '#1d9bf0', swatchFg: '#ffffff' },
   { id: 'amber', swatch: '#f59e0b', swatchFg: '#0f172a' },
   { id: 'rose', swatch: '#f43f5e', swatchFg: '#ffffff' },

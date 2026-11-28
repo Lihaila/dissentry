@@ -208,11 +208,8 @@ export function LandingPage({ initialSection }: { initialSection?: string } = {}
       <main>
         {/* Hero */}
         <section className="relative overflow-hidden">
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-amber-200/60 blur-3xl" />
-            <div className="absolute -right-32 top-6 h-[460px] w-[460px] rounded-full bg-pink-200/50 blur-3xl" />
-            <div className="absolute bottom-[-180px] left-1/3 h-[500px] w-[620px] rounded-full bg-indigo-200/50 blur-3xl" />
-          </div>
+          {/* three.js: model threads weave into agreement, one dissents (public/lh-fx.js) */}
+          <div aria-hidden className="lh-fx" data-fx="dissent" data-calm="main section:first-child h1, main section:first-child h1 + p" />
           <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 pb-20 pt-12 lg:grid-cols-[0.98fr_1.08fr] lg:gap-12 lg:pb-24 lg:pt-16">
             <div>
               <div className="flex flex-wrap items-center gap-2">

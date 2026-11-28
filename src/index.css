@@ -820,3 +820,34 @@ html[data-theme="dark"] .hljs-deletion { color: #ffdcd7; background-color: #6706
   color: inherit;
 }
 .share-card .md del { text-decoration-thickness: 3px; text-underline-offset: 7px; }
+
+/* ============================================================================
+   The Lihai La look (as lihaila.com): ivory canvas, warm greys, ink buttons, clay links and notes.
+   Unlayered, so it overrides the Tailwind palette in the light themes; the dim/dark themes
+   (html[data-theme=…], more specific) keep their own values.
+   ============================================================================ */
+:root {
+  --bg-canvas: #faf9f5; --bg-subtle: #f5f3ec; --bg-muted: #f0eee6;
+  --bg-header: rgba(250, 249, 245, 0.88); --bg-header-strong: rgba(250, 249, 245, 0.94);
+  --color-ink: #141413;
+  --color-note: #c15f3c;
+  --claim-bg: rgba(193, 95, 60, 0.12); --claim-wave: #c15f3c;
+  --color-slate-50: #f7f5ef; --color-slate-100: #f0eee6; --color-slate-200: #e6e3d9; --color-slate-300: #d1cec3;
+  --color-slate-400: #a8a59b; --color-slate-500: #87867f; --color-slate-600: #5e5d59; --color-slate-700: #3f3e3a;
+  --color-slate-800: #2a2926; --color-slate-900: #1c1b19;
+  --color-amber-50: #fbf1ec; --color-amber-100: #f6e0d6; --color-amber-200: #eec3b0; --color-amber-300: #e3a58b;
+  --color-amber-400: #d97757; --color-amber-500: #c15f3c; --color-amber-600: #a94f31; --color-amber-700: #8a3f27;
+  --color-amber-800: #6e321f; --color-amber-900: #522518;
+}
+html[data-accent="ink"]:not([data-theme="dim"]):not([data-theme="dark"]) {
+  --accent: #141413; --accent-hover: #2e2d2a; --accent-fg: #faf9f5;
+  --accent-text: #c15f3c; --accent-text-hover: #a94f31; --accent-soft: #f4e4dc;
+  --accent-border: rgba(193, 95, 60, 0.45); --accent-ring: rgba(193, 95, 60, 0.22);
+}
+h1, h2 { font-family: 'Iowan Old Style', 'Charter', 'Source Serif 4', 'Source Serif Pro', 'Palatino Linotype', Georgia, serif; font-weight: 600; letter-spacing: -0.02em; }
+
+/* three.js hero on the overview page (public/lh-fx.js, built from lihaila-site/src/lh-fx.js) */
+.lh-fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.4s ease;
+  -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.lh-fx.is-on { opacity: 1; }
+.lh-fx canvas { width: 100% !important; height: 100% !important; display: block; }
